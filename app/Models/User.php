@@ -4,12 +4,18 @@ namespace App\Models;
 
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
     use Notifiable;
 
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
     protected $fillable = [
         'uuid',
         'employee_code',
@@ -35,11 +41,21 @@ class User extends Authenticatable implements JWTSubject
         'deleted_by',
     ];
 
+    /**
+     * The attributes that should be hidden for serialization.
+     *
+     * @var array<int, string>
+     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string, string>
+     */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'phone_verified_at' => 'datetime',
@@ -48,22 +64,33 @@ class User extends Authenticatable implements JWTSubject
         'last_activity_at' => 'datetime',
     ];
 
-    // JWT interface
+    /**
+     * Get the identifier that will be stored in the JWT subject claim.
+     */
     public function getJWTIdentifier()
     {
         return $this->getKey();
     }
 
+    /**
+     * Return a key-value array containing any custom claims to add to the JWT.
+     */
     public function getJWTCustomClaims()
     {
         return [];
     }
-// in app/Models/User.php
-public function socialAccounts()
-{
-    return $this->hasMany(SocialAccount::class);
-}
-    // Relationships
+
+    /**
+     * Get the social accounts associated with the user.
+     */
+    public function socialAccounts(): HasMany
+    {
+        return $this->hasMany(SocialAccount::class);
+    }
+
+    /**
+     * The roles that belong to the user.
+     */
     public function roles()
     {
         return $this->belongsToMany(Role::class, 'user_roles')
@@ -71,13 +98,27 @@ public function socialAccounts()
                     ->wherePivot('is_deleted', 0);
     }
 
+    /**
+     * The permissions that belong to the user.
+     */
     public function permissions()
     {
         return $this->belongsToMany(Permission::class, 'user_permissions')
                     ->withPivot('allowed')
                     ->wherePivot('is_deleted', 0);
     }
+public function devices()
+{
+    return $this->hasMany(Device::class);
+}
 
+public function loginHistories()
+{
+    return $this->hasMany(LoginHistory::class);
+}
+    /**
+     * Get the JWT tokens owned by the user.
+     */
     public function jwtTokens()
     {
         return $this->hasMany(JwtToken::class);

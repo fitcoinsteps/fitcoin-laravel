@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
@@ -7,44 +8,42 @@ use App\Models\SocialAccount;
 use App\Models\Role;
 use App\Helpers\JwtTokenHelper;
 use App\Services\RoleService;
+use App\Traits\DeviceTrait;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\AbstractProvider;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class SocialAuthController extends Controller
 {
-    /**
-     * Redirect to the provider (Google / Apple)
-     */
-    public function redirect($provider)
+    use DeviceTrait;
+
+    public function redirect(string $provider): RedirectResponse
     {
-        // For Apple you may need to set up a custom provider in Socialite
-        return Socialite::driver($provider)->stateless()->redirect();
+        /** @var AbstractProvider $driver */
+        $driver = Socialite::driver($provider);
+        return $driver->stateless()->redirect();
     }
 
-    /**
-     * Handle callback from the provider
-     */
-    public function callback($provider)
+    public function callback(string $provider, Request $request): RedirectResponse
     {
-        $socialUser = Socialite::driver($provider)->stateless()->user();
+        /** @var AbstractProvider $driver */
+        $driver = Socialite::driver($provider);
+        $socialUser = $driver->stateless()->user();
 
-        // Find existing social account or create new user
         $socialAccount = SocialAccount::where('provider', $provider)
                             ->where('provider_id', $socialUser->getId())
                             ->first();
 
         if ($socialAccount) {
-            // Existing social login
             $user = $socialAccount->user;
         } else {
-            // Check if a user already exists with this email
             $user = User::where('email', $socialUser->getEmail())->first();
 
             if (!$user) {
-                // Create a new user
                 $isFirstUser = User::count() === 0;
-                RoleService::createDefaultRolesIfNeeded(); // ensure roles exist
+                RoleService::createDefaultRolesIfNeeded();
 
                 $user = User::create([
                     'uuid'              => (string) Str::uuid(),
@@ -53,30 +52,41 @@ class SocialAuthController extends Controller
                     'last_name'         => $socialUser->user['family_name'] ?? '',
                     'email'             => $socialUser->getEmail(),
                     'email_verified_at' => now(),
-                    'password'          => bcrypt(Str::random(32)), // random password
+                    'password'          => bcrypt(Str::random(32)),
                     'status'            => 'active',
                     'is_active'         => true,
                 ]);
 
-                // Assign role: first user = super-admin, else = users
                 $roleSlug = $isFirstUser ? 'super-admin' : 'users';
                 $role = Role::where('slug', $roleSlug)->first();
                 $user->roles()->attach($role->id, ['assigned_at' => now()]);
             }
 
-            // Link the social account
             $user->socialAccounts()->create([
                 'provider'    => $provider,
                 'provider_id' => $socialUser->getId(),
             ]);
         }
 
-        // Update last login
+        $ip        = $request->ip();
+        $userAgent = $request->userAgent();
+
+        // ── Device availability check ──
+        if (!$this->isDeviceAvailable($ip, $userAgent, $user->id)) {
+            $frontendUrl = config('app.frontend_url', '/login');
+            return redirect()->away($frontendUrl . '?error=device_in_use');
+        }
+
+        // ── Register/update device ──
+        $this->checkDevice($user, $ip, $userAgent, 'Google OAuth', true);
+
         $user->update(['last_login_at' => now()]);
 
-        // Generate JWT tokens (just like normal login)
         $tokens = JwtTokenHelper::generateTokens($user);
 
-        return response()->json($tokens);
+        $frontendUrl = config('app.frontend_url', '/login');
+        return redirect()->away(
+            $frontendUrl . '?token=' . $tokens['access_token'] . '&refresh_token=' . ($tokens['refresh_token'] ?? '')
+        );
     }
 }
