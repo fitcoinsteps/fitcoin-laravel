@@ -82,14 +82,12 @@ class AuthController extends Controller
             return response()->json(['error' => 'Account disabled or locked'], 403);
         }
 
-        // ── Device availability check ──
         if (!$this->isDeviceAvailable($ip, $userAgent, $user->id)) {
             return response()->json([
                 'error' => 'Device already in use. Please logout first before logging in with another account.'
             ], 403);
         }
 
-        // ── Register/update device ──
         $device = $this->checkDevice($user, $ip, $userAgent, $deviceName, $credentials['remember'] ?? false);
 
         $user->update([
@@ -107,6 +105,10 @@ class AuthController extends Controller
 
         $tokens = JwtTokenHelper::generateTokens($user);
 
+        auth()->login($user);
+
+        $redirectUrl = $this->getRedirectUrl($user);
+
         return response()->json([
             'access_token' => $tokens['access_token'],
             'token_type'   => 'bearer',
@@ -117,7 +119,21 @@ class AuthController extends Controller
                 'name'      => $device->device_name,
                 'is_trusted'=> $device->is_trusted,
             ] : null,
+            'redirect_url' => $redirectUrl,
         ]);
+    }
+
+    private function getRedirectUrl(User $user): string
+    {
+        if ($user->hasRole('super-admin')) {
+            return '/super-admin/dashboard';
+        }
+        
+        if ($user->hasRole('admin')) {
+            return '/admin/dashboard';
+        }
+        
+        return '/dashboard';
     }
 
     private function checkRateLimit(string $email, string $ip): void
@@ -319,6 +335,12 @@ class AuthController extends Controller
             }
 
             $this->guard()->logout();
+            
+            auth()->logout();
+            
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
             return response()->json(['message' => 'Logged out successfully']);
         } catch (\Exception $e) {
             return response()->json(['message' => 'Already logged out'], 200);
@@ -335,6 +357,7 @@ class AuthController extends Controller
         }
 
         $this->guard()->logout();
+        auth()->logout();
 
         return response()->json([
             'message' => 'All sessions revoked successfully'
@@ -475,6 +498,8 @@ class AuthController extends Controller
         $token = JwtTokenHelper::generateTokens($user);
 
         $this->logSuccessfulLogin($user, $request->ip(), $request->userAgent());
+
+        auth()->login($user);
 
         return response()->json([
             'message'      => 'Password reset successfully.',

@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\DashboardController;
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
     return view('user.home');
@@ -38,3 +40,22 @@ Route::get('/admin', function () {
     return view('admin.admin');
 })->name('admin');
 
+Route::middleware(['auth'])->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'userDashboard'])
+        ->name('user.dashboard');
+
+    Route::get('/admin/dashboard', [DashboardController::class, 'adminDashboard'])
+        ->middleware(['role:admin,super-admin'])
+        ->name('admin.dashboard');
+
+    Route::get('/super-admin/dashboard', [DashboardController::class, 'superAdminDashboard'])
+        ->middleware(['role:super-admin'])
+        ->name('super-admin.dashboard');
+});
+
+Route::post('/logout', function () {
+    Auth::logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect('/');
+})->name('logout');

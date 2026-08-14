@@ -11,11 +11,6 @@ class User extends Authenticatable implements JWTSubject
 {
     use Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
     protected $fillable = [
         'uuid',
         'employee_code',
@@ -41,21 +36,11 @@ class User extends Authenticatable implements JWTSubject
         'deleted_by',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'phone_verified_at' => 'datetime',
@@ -64,33 +49,21 @@ class User extends Authenticatable implements JWTSubject
         'last_activity_at' => 'datetime',
     ];
 
-    /**
-     * Get the identifier that will be stored in the JWT subject claim.
-     */
     public function getJWTIdentifier()
     {
         return $this->getKey();
     }
 
-    /**
-     * Return a key-value array containing any custom claims to add to the JWT.
-     */
     public function getJWTCustomClaims()
     {
         return [];
     }
 
-    /**
-     * Get the social accounts associated with the user.
-     */
     public function socialAccounts(): HasMany
     {
         return $this->hasMany(SocialAccount::class);
     }
 
-    /**
-     * The roles that belong to the user.
-     */
     public function roles()
     {
         return $this->belongsToMany(Role::class, 'user_roles')
@@ -98,29 +71,91 @@ class User extends Authenticatable implements JWTSubject
                     ->wherePivot('is_deleted', 0);
     }
 
-    /**
-     * The permissions that belong to the user.
-     */
     public function permissions()
     {
         return $this->belongsToMany(Permission::class, 'user_permissions')
                     ->withPivot('allowed')
                     ->wherePivot('is_deleted', 0);
     }
-public function devices()
-{
-    return $this->hasMany(Device::class);
-}
 
-public function loginHistories()
-{
-    return $this->hasMany(LoginHistory::class);
-}
-    /**
-     * Get the JWT tokens owned by the user.
-     */
+    public function devices()
+    {
+        return $this->hasMany(Device::class);
+    }
+
+    public function loginHistories()
+    {
+        return $this->hasMany(LoginHistory::class);
+    }
+
     public function jwtTokens()
     {
         return $this->hasMany(JwtToken::class);
+    }
+
+    public function hasRole($role)
+    {
+        if (is_string($role)) {
+            return $this->roles->contains('slug', $role);
+        }
+
+        if (is_array($role)) {
+            foreach ($role as $r) {
+                if ($this->hasRole($r)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        return !!$role->intersect($this->roles)->count();
+    }
+
+    public function hasPermission($permission)
+    {
+        if (is_string($permission)) {
+            return $this->permissions->contains('slug', $permission);
+        }
+
+        if (is_array($permission)) {
+            foreach ($permission as $p) {
+                if ($this->hasPermission($p)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        return !!$permission->intersect($this->permissions)->count();
+    }
+
+    public function hasAnyRole($roles)
+    {
+        return $this->hasRole($roles);
+    }
+
+    public function hasAllRoles($roles)
+    {
+        if (is_string($roles)) {
+            return $this->hasRole($roles);
+        }
+
+        foreach ($roles as $role) {
+            if (!$this->hasRole($role)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    public function hasPermissionTo($permission)
+    {
+        return $this->hasPermission($permission);
+    }
+
+    public function hasAnyPermission($permissions)
+    {
+        return $this->hasPermission($permissions);
     }
 }

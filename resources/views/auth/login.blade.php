@@ -371,7 +371,6 @@
             transform: translateY(-3px);
         }
 
-        /* OTP Section Styles */
         .otp-section {
             margin-top: 20px;
             padding-top: 20px;
@@ -483,7 +482,6 @@
 <body>
     <div class="split-screen">
 
-        <!-- ==================== LEFT PANEL ==================== -->
         <div class="left-panel">
             <div class="relative z-10 text-center max-w-lg mb-2">
                 <h1 class="text-4xl md:text-5xl font-extrabold text-white leading-tight drop-shadow-lg">Achieve More <br>With Every Step.</h1>
@@ -545,7 +543,6 @@
             </div>
         </div>
 
-        <!-- ==================== RIGHT PANEL ==================== -->
         <div class="right-panel">
             <div class="glass-auth-card">
                 <div class="flex justify-center mb-6">
@@ -555,7 +552,6 @@
                 <h3 class="text-xl font-bold mb-1">Welcome Back</h3>
                 <p class="text-sm text-gray-400 mb-4">Access your fitness journey.</p>
 
-                <!-- Message Display -->
                 <div id="message" class="mb-4 hidden"></div>
 
                 <form id="login-form">
@@ -578,7 +574,6 @@
                     </button>
                 </form>
 
-                <!-- Social Login Buttons -->
                 <div class="social-row">
                     <a href="/api/auth/google" class="social-btn" title="Sign in with Google">
                         <i class="fab fa-google text-red-400"></i>
@@ -597,7 +592,6 @@
                     </div>
                 </div>
 
-                <!-- OTP Verification Section -->
                 <div id="otp-section" class="otp-section hidden">
                     <h3>Verify Your Email</h3>
                     <p>We sent a 6-digit OTP to your email. Please enter it below.</p>
@@ -629,317 +623,314 @@
     </div>
 
     <script>
-        (function() {
-            'use strict';
+    (function() {
+        'use strict';
 
-            // ── Sparkle particles ──
-            document.addEventListener("DOMContentLoaded", function() {
-                const field = document.getElementById('sparkleField');
-                if (field) {
-                    for (let i = 0; i < 30; i++) {
-                        const spark = document.createElement('div');
-                        spark.className = 'sparkle';
-                        const size = Math.random() * 3 + 1;
-                        spark.style.width = size + 'px';
-                        spark.style.height = size + 'px';
-                        spark.style.left = Math.random() * 100 + '%';
-                        spark.style.top = Math.random() * 100 + '%';
-                        const angle = Math.random() * 360;
-                        const distance = Math.random() * 100 + 20;
-                        spark.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
-                        spark.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
-                        spark.style.setProperty('--duration', (Math.random() * 2 + 1) + 's');
-                        spark.style.animationDelay = Math.random() * 3 + 's';
-                        field.appendChild(spark);
-                    }
+        document.addEventListener("DOMContentLoaded", function() {
+            const field = document.getElementById('sparkleField');
+            if (field) {
+                for (let i = 0; i < 30; i++) {
+                    const spark = document.createElement('div');
+                    spark.className = 'sparkle';
+                    const size = Math.random() * 3 + 1;
+                    spark.style.width = size + 'px';
+                    spark.style.height = size + 'px';
+                    spark.style.left = Math.random() * 100 + '%';
+                    spark.style.top = Math.random() * 100 + '%';
+                    const angle = Math.random() * 360;
+                    const distance = Math.random() * 100 + 20;
+                    spark.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+                    spark.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+                    spark.style.setProperty('--duration', (Math.random() * 2 + 1) + 's');
+                    spark.style.animationDelay = Math.random() * 3 + 's';
+                    field.appendChild(spark);
                 }
-            });
-
-            // ── DOM refs ──
-            const form = document.getElementById('login-form');
-            const messageEl = document.getElementById('message');
-            const loginBtn = document.getElementById('login-btn');
-            const otpSection = document.getElementById('otp-section');
-            const otpInput = document.getElementById('otp-code');
-            const verifyBtn = document.getElementById('verify-otp-btn');
-            const resendBtn = document.getElementById('resend-otp-btn');
-            const backToLoginBtn = document.getElementById('back-to-login-btn');
-            const timerEl = document.getElementById('resend-timer');
-            const emailInput = document.getElementById('email');
-            const passwordInput = document.getElementById('password');
-
-            let pendingEmail = null;
-            let resendTimer = null;
-            let resendCountdown = 60;
-
-            // ── Message helpers ──
-            function showMessage(text, type = 'success') {
-                messageEl.textContent = text;
-                messageEl.className = 'mb-4 ' + (type === 'success' ? 'alert-success' : type === 'warning' ? 'alert-warning' :
-                    'alert-error');
-                messageEl.classList.remove('hidden');
             }
+        });
 
-            function hideMessage() {
-                messageEl.classList.add('hidden');
+        const form = document.getElementById('login-form');
+        const messageEl = document.getElementById('message');
+        const loginBtn = document.getElementById('login-btn');
+        const otpSection = document.getElementById('otp-section');
+        const otpInput = document.getElementById('otp-code');
+        const verifyBtn = document.getElementById('verify-otp-btn');
+        const resendBtn = document.getElementById('resend-otp-btn');
+        const backToLoginBtn = document.getElementById('back-to-login-btn');
+        const timerEl = document.getElementById('resend-timer');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+
+        let pendingEmail = null;
+        let resendTimer = null;
+        let resendCountdown = 60;
+
+        function showMessage(text, type = 'success') {
+            messageEl.textContent = text;
+            messageEl.className = 'mb-4 ' + (type === 'success' ? 'alert-success' : type === 'warning' ? 'alert-warning' : 'alert-error');
+            messageEl.classList.remove('hidden');
+        }
+
+        function hideMessage() {
+            messageEl.classList.add('hidden');
+        }
+
+        function showOTPSection(email) {
+            pendingEmail = email;
+            otpSection.classList.remove('hidden');
+            emailInput.disabled = true;
+            passwordInput.disabled = true;
+            loginBtn.disabled = true;
+            otpInput.focus();
+            startResendTimer();
+        }
+
+        function hideOTPSection() {
+            otpSection.classList.add('hidden');
+            emailInput.disabled = false;
+            passwordInput.disabled = false;
+            loginBtn.disabled = false;
+            if (resendTimer) {
+                clearInterval(resendTimer);
+                resendTimer = null;
             }
+        }
 
-            // ── OTP UI helpers ──
-            function showOTPSection(email) {
-                pendingEmail = email;
-                otpSection.classList.remove('hidden');
-                emailInput.disabled = true;
-                passwordInput.disabled = true;
-                loginBtn.disabled = true;
-                otpInput.focus();
-                startResendTimer();
-            }
-
-            function hideOTPSection() {
-                otpSection.classList.add('hidden');
-                emailInput.disabled = false;
-                passwordInput.disabled = false;
-                loginBtn.disabled = false;
-                if (resendTimer) {
+        function startResendTimer() {
+            if (resendTimer) clearInterval(resendTimer);
+            resendCountdown = 60;
+            resendBtn.disabled = true;
+            resendBtn.style.opacity = '0.5';
+            timerEl.textContent = 'Resend available in ' + resendCountdown + 's';
+            resendTimer = setInterval(() => {
+                resendCountdown--;
+                timerEl.textContent = 'Resend available in ' + resendCountdown + 's';
+                if (resendCountdown <= 0) {
                     clearInterval(resendTimer);
                     resendTimer = null;
+                    resendBtn.disabled = false;
+                    resendBtn.style.opacity = '1';
+                    timerEl.textContent = 'Ready to resend';
                 }
-            }
+            }, 1000);
+        }
 
-            function startResendTimer() {
-                if (resendTimer) clearInterval(resendTimer);
-                resendCountdown = 60;
-                resendBtn.disabled = true;
-                resendBtn.style.opacity = '0.5';
-                timerEl.textContent = `Resend available in ${resendCountdown}s`;
-                resendTimer = setInterval(() => {
-                    resendCountdown--;
-                    timerEl.textContent = `Resend available in ${resendCountdown}s`;
-                    if (resendCountdown <= 0) {
-                        clearInterval(resendTimer);
-                        resendTimer = null;
-                        resendBtn.disabled = false;
-                        resendBtn.style.opacity = '1';
-                        timerEl.textContent = 'Ready to resend';
-                    }
-                }, 1000);
-            }
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const refreshToken = urlParams.get('refresh_token');
 
-            // ── Auto‑login from OAuth callback ──
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
-            const refreshToken = urlParams.get('refresh_token');
+        if (token) {
+            localStorage.setItem('access_token', token);
+            if (refreshToken) localStorage.setItem('refresh_token', refreshToken);
+            window.history.replaceState({}, document.title, window.location.pathname);
+            window.location.href = '/dashboard';
+            return;
+        }
 
-            if (token) {
-                localStorage.setItem('access_token', token);
-                if (refreshToken) localStorage.setItem('refresh_token', refreshToken);
-                window.history.replaceState({}, document.title, window.location.pathname);
-                window.location.href = '/dashboard';
+        const errorParam = urlParams.get('error');
+        if (errorParam === 'device_in_use') {
+            showMessage('This device is currently in use by another account. Please logout first.', 'error');
+            window.history.replaceState({}, document.title, window.location.pathname);
+        }
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            hideMessage();
+
+            const email = emailInput.value.trim();
+            const password = passwordInput.value.trim();
+
+            if (!email || !password) {
+                showMessage('Please fill in all fields.', 'error');
                 return;
             }
 
-            // ── Device‑in‑use error handling ──
-            const errorParam = urlParams.get('error');
-            if (errorParam === 'device_in_use') {
-                showMessage('This device is currently in use by another account. Please logout first.', 'error');
-                window.history.replaceState({}, document.title, window.location.pathname);
+            if (!email.includes('@') || !email.includes('.')) {
+                showMessage('Please enter a valid email address.', 'error');
+                return;
             }
 
-            // ── Login form submit ──
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                hideMessage();
+            try {
+                loginBtn.disabled = true;
+                loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Logging in...';
 
-                const email = emailInput.value.trim();
-                const password = passwordInput.value.trim();
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
-                if (!email || !password) {
-                    showMessage('Please fill in all fields.', 'error');
-                    return;
-                }
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({ email, password })
+                });
 
-                if (!email.includes('@') || !email.includes('.')) {
-                    showMessage('Please enter a valid email address.', 'error');
-                    return;
-                }
+                const data = await response.json();
 
-                try {
-                    loginBtn.disabled = true;
-                    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Logging in...';
-
-                    const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-
-                    const response = await fetch('/api/login', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': token
-                        },
-                        body: JSON.stringify({ email, password })
-                    });
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        if (data.requires_verification) {
-                            showMessage(data.message || 'Please verify your email first.', 'warning');
-                            showOTPSection(email);
-                            loginBtn.disabled = false;
-                            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Log In';
-                            return;
-                        }
-                        showMessage(data.error || data.message || 'Login failed. Please try again.', 'error');
+                if (!response.ok) {
+                    if (data.requires_verification) {
+                        showMessage(data.message || 'Please verify your email first.', 'warning');
+                        showOTPSection(email);
                         loginBtn.disabled = false;
                         loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Log In';
                         return;
                     }
-
-                    if (data.access_token) {
-                        localStorage.setItem('access_token', data.access_token);
-                        if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
-                    }
-
-                    showMessage('Login successful! Redirecting…', 'success');
-
-                    setTimeout(function() {
-                        window.location.href = '/dashboard';
-                    }, 1000);
-
-                } catch (err) {
-                    showMessage('Network error – please check your connection and try again.', 'error');
+                    showMessage(data.error || data.message || 'Login failed. Please try again.', 'error');
                     loginBtn.disabled = false;
                     loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Log In';
-                }
-            });
-
-            // ── Verify OTP ──
-            verifyBtn.addEventListener('click', async function() {
-                const code = otpInput.value.trim();
-                if (!code || code.length !== 6) {
-                    showMessage('Please enter a valid 6-digit OTP code.', 'error');
-                    otpInput.focus();
                     return;
                 }
 
-                verifyBtn.disabled = true;
-                verifyBtn.textContent = 'Verifying...';
-
-                try {
-                    const response = await fetch('/api/verify-otp', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                        },
-                        body: JSON.stringify({ email: pendingEmail, code })
-                    });
-
-                    const data = await response.json();
-
-                    if (!response.ok) {
-                        showMessage(data.message || 'Invalid or expired OTP code.', 'error');
-                        otpInput.value = '';
-                        otpInput.focus();
-                        verifyBtn.disabled = false;
-                        verifyBtn.textContent = 'Verify';
-                        return;
-                    }
-
-                    showMessage('Email verified! Please login again.', 'success');
-                    if (data.token) {
-                        localStorage.setItem('access_token', data.token);
-                        if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
-                    }
-
-                    hideOTPSection();
-                    passwordInput.value = '';
-                    otpInput.value = '';
-                    verifyBtn.disabled = false;
-                    verifyBtn.textContent = 'Verify';
-
-                    setTimeout(function() {
-                        window.location.href = '/dashboard';
-                    }, 1500);
-
-                } catch (error) {
-                    showMessage('Network error, please try again.', 'error');
-                    verifyBtn.disabled = false;
-                    verifyBtn.textContent = 'Verify';
+                if (data.access_token) {
+                    localStorage.setItem('access_token', data.access_token);
+                    if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
                 }
-            });
 
-            // ── Resend OTP ──
-            resendBtn.addEventListener('click', async function() {
-                resendBtn.disabled = true;
-                resendBtn.textContent = 'Sending...';
+                showMessage('Login successful! Redirecting…', 'success');
 
-                try {
-                    const response = await fetch('/api/resend-otp', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Accept': 'application/json',
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                        },
-                        body: JSON.stringify({ email: pendingEmail })
-                    });
+                const redirectUrl = data.redirect_url || '/dashboard';
 
-                    const data = await response.json();
+                setTimeout(function() {
+                    window.location.href = redirectUrl;
+                }, 1000);
 
-                    if (!response.ok) {
-                        showMessage(data.message || 'Failed to resend OTP', 'error');
-                        resendBtn.disabled = false;
-                        resendBtn.textContent = 'Resend OTP';
-                        return;
-                    }
+            } catch (err) {
+                console.error('Login error:', err);
+                showMessage('Network error – please check your connection and try again.', 'error');
+                loginBtn.disabled = false;
+                loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Log In';
+            }
+        });
 
-                    showMessage('New OTP sent to your email!', 'success');
-                    otpInput.value = '';
-                    otpInput.focus();
-                    startResendTimer();
-
-                } catch (error) {
-                    showMessage('Network error, please try again.', 'error');
-                } finally {
-                    resendBtn.textContent = 'Resend OTP';
-                }
-            });
-
-            // ── Back to Login ──
-            backToLoginBtn.addEventListener('click', function() {
-                hideOTPSection();
-                hideMessage();
-                otpInput.value = '';
-                passwordInput.value = '';
-                emailInput.focus();
-            });
-
-            // ── OTP input validation ──
-            otpInput.addEventListener('input', function() {
-                this.value = this.value.replace(/\D/g, '').slice(0, 6);
-            });
-
-            otpInput.addEventListener('keydown', function(e) {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    if (!verifyBtn.disabled) verifyBtn.click();
-                }
-            });
-
-            // ── Check for saved pending verification ──
-            const savedEmail = localStorage.getItem('pending_login_verification');
-            if (savedEmail) {
-                setTimeout(() => {
-                    emailInput.value = savedEmail;
-                    showOTPSection(savedEmail);
-                    showMessage('Please verify your email to continue.', 'warning');
-                    localStorage.removeItem('pending_login_verification');
-                }, 500);
+        verifyBtn.addEventListener('click', async function() {
+            const code = otpInput.value.trim();
+            if (!code || code.length !== 6) {
+                showMessage('Please enter a valid 6-digit OTP code.', 'error');
+                otpInput.focus();
+                return;
             }
 
-        })();
+            verifyBtn.disabled = true;
+            verifyBtn.textContent = 'Verifying...';
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+                const response = await fetch('/api/verify-otp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({ email: pendingEmail, code })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showMessage(data.message || 'Invalid or expired OTP code.', 'error');
+                    otpInput.value = '';
+                    otpInput.focus();
+                    verifyBtn.disabled = false;
+                    verifyBtn.textContent = 'Verify';
+                    return;
+                }
+
+                showMessage('Email verified! Please login again.', 'success');
+                if (data.token) {
+                    localStorage.setItem('access_token', data.token);
+                    if (data.refresh_token) localStorage.setItem('refresh_token', data.refresh_token);
+                }
+
+                hideOTPSection();
+                passwordInput.value = '';
+                otpInput.value = '';
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = 'Verify';
+
+                setTimeout(function() {
+                    window.location.href = '/dashboard';
+                }, 1500);
+
+            } catch (error) {
+                console.error('OTP verification error:', error);
+                showMessage('Network error, please try again.', 'error');
+                verifyBtn.disabled = false;
+                verifyBtn.textContent = 'Verify';
+            }
+        });
+
+        resendBtn.addEventListener('click', async function() {
+            resendBtn.disabled = true;
+            resendBtn.textContent = 'Sending...';
+
+            try {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+                const response = await fetch('/api/resend-otp', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': csrfToken
+                    },
+                    body: JSON.stringify({ email: pendingEmail })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    showMessage(data.message || 'Failed to resend OTP', 'error');
+                    resendBtn.disabled = false;
+                    resendBtn.textContent = 'Resend OTP';
+                    return;
+                }
+
+                showMessage('New OTP sent to your email!', 'success');
+                otpInput.value = '';
+                otpInput.focus();
+                startResendTimer();
+
+            } catch (error) {
+                console.error('Resend OTP error:', error);
+                showMessage('Network error, please try again.', 'error');
+            } finally {
+                resendBtn.textContent = 'Resend OTP';
+                resendBtn.disabled = false;
+            }
+        });
+
+        backToLoginBtn.addEventListener('click', function() {
+            hideOTPSection();
+            hideMessage();
+            otpInput.value = '';
+            passwordInput.value = '';
+            emailInput.focus();
+        });
+
+        otpInput.addEventListener('input', function() {
+            this.value = this.value.replace(/\D/g, '').slice(0, 6);
+        });
+
+        otpInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                if (!verifyBtn.disabled) verifyBtn.click();
+            }
+        });
+
+        const savedEmail = localStorage.getItem('pending_login_verification');
+        if (savedEmail) {
+            setTimeout(() => {
+                emailInput.value = savedEmail;
+                showOTPSection(savedEmail);
+                showMessage('Please verify your email to continue.', 'warning');
+                localStorage.removeItem('pending_login_verification');
+            }, 500);
+        }
+
+    })();
     </script>
 </body>
 </html>
