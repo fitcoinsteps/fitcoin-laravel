@@ -1,436 +1,661 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dark">
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <title>Login - Fitcoin</title>
 
-    <style>
-        /* All styles (unchanged) – kept identical to what you provided */
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        neonpink: '#ec4899', neonpurple: '#8b5cf6', neongold: '#d4af37',
+                        darkbg: '#0a0512', cardbg: '#1c0929'
+                    }
+                }
+            }
         }
+    </script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
+    <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            line-height: 1.5;
-            -webkit-font-smoothing: antialiased;
-        }
-
-        .min-h-screen {
+            background: #0a0512;
+            color: white;
+            overflow-x: hidden;
             min-height: 100vh;
+            margin: 0;
         }
-        .flex {
+        .glow-text {
+            text-shadow: 0 0 25px rgba(236, 72, 153, 0.6);
+        }
+        .glass-card {
+            background: rgba(28, 9, 41, 0.5);
+            backdrop-filter: blur(14px);
+            border: 1px solid rgba(236, 72, 153, 0.2);
+            transition: all 0.3s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(236, 72, 153, 0.6);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 40px rgba(139, 92, 246, 0.3);
+        }
+
+        .phone-perspective-wrapper {
+            perspective: 1200px;
             display: flex;
-        }
-        .items-center {
+            justify-content: center;
             align-items: center;
+            position: relative;
+            z-index: 10;
+            animation: breathePhone 4.5s ease-in-out infinite;
         }
-        .justify-center {
+        @keyframes breathePhone {
+            0%,
+            100% {
+                transform: scale(1) rotateY(-25deg) rotateX(10deg) rotateZ(5deg);
+            }
+            50% {
+                transform: scale(1.03) rotateY(-15deg) rotateX(5deg) rotateZ(3deg);
+            }
+        }
+        .phone-frame {
+            background: #150822;
+            border-radius: 45px;
+            border: 4px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 20px 100px rgba(236, 72, 153, 0.6), inset 0 0 20px rgba(139, 92, 246, 0.2);
+            overflow: hidden;
+            position: relative;
+            max-width: 300px;
+            width: 100%;
+            transform: rotateY(-25deg) rotateX(10deg) rotateZ(5deg) scale(0.9);
+            transition: transform 0.6s;
+        }
+        .phone-frame:hover {
+            transform: rotateY(-15deg) rotateX(5deg) rotateZ(3deg) scale(0.95);
+        }
+
+        .step-counter-container {
+            position: relative;
+            width: 160px;
+            height: 160px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
             justify-content: center;
         }
-        .w-full {
+        .app-ring-chart {
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background: conic-gradient(from 180deg, #8b5cf6 0%, #06b6d4 25%, #ec4899 50%, #d4af37 75%, #8b5cf6 100%);
+            box-shadow: inset 0 0 40px rgba(236, 72, 153, 0.6), 0 0 80px rgba(139, 92, 246, 0.5);
+            transform: rotate(-20deg);
+            animation: ringPulse 2s ease-in-out infinite;
+        }
+        @keyframes ringPulse {
+            0%,
+            100% {
+                transform: rotate(-20deg) scale(1);
+                opacity: 0.9;
+            }
+            50% {
+                transform: rotate(-10deg) scale(1.06);
+                opacity: 1;
+            }
+        }
+        .app-ring-inner {
+            position: relative;
+            z-index: 4;
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #150822;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(236, 72, 153, 0.5);
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9);
+        }
+
+        .particle-field {
+            position: absolute;
+            inset: -40px;
+            z-index: 1;
+            pointer-events: none;
+            overflow: visible;
+        }
+        .sparkle {
+            position: absolute;
+            background: #ec4899;
+            border-radius: 50%;
+            box-shadow: 0 0 15px #ec4899, 0 0 30px #ec4899;
+            animation: sparkleExplosion var(--duration) linear infinite;
+            opacity: 0;
+        }
+        @keyframes sparkleExplosion {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(var(--tx), var(--ty)) scale(0);
+                opacity: 0;
+            }
+        }
+
+        .app-btn {
+            background: rgba(44, 18, 66, 0.85);
+            border: 1px solid rgba(236, 72, 153, 0.3);
+            border-radius: 16px;
+            transition: all 0.3s;
+            animation: floatButton 3s ease-in-out infinite;
+        }
+        .app-btn:hover {
+            background: rgba(236, 72, 153, 0.25);
+            border-color: #ec4899;
+            transform: scale(1.05) !important;
+        }
+        @keyframes floatButton {
+            0%,
+            100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+        .btn-1 {
+            animation-delay: 0s;
+        }
+        .btn-2 {
+            animation-delay: 0.5s;
+        }
+        .btn-3 {
+            animation-delay: 1s;
+        }
+        .btn-4 {
+            animation-delay: 1.5s;
+        }
+
+        .flying-money {
+            position: absolute;
+            color: #22c55e;
+            text-shadow: 0 0 20px rgba(34, 197, 94, 0.7), 0 0 50px rgba(34, 197, 94, 0.3);
+            animation: flyMoney 8s linear infinite;
+            z-index: 5;
+        }
+        @keyframes flyMoney {
+            0% {
+                transform: translateY(0) rotate(0deg) scale(0.8) translateX(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-400px) rotate(720deg) scale(1.3) translateX(150px);
+                opacity: 0;
+            }
+        }
+
+        .nav-icon-active {
+            color: #ec4899;
+            filter: drop-shadow(0 0 8px #ec4899);
+        }
+        .nav-icon-inactive {
+            color: #6b4a7d;
+            transition: all 0.3s;
+        }
+
+        .split-screen {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+        .left-panel {
+            flex: 1;
+            background: #0a0512;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            padding: 20px;
+        }
+        .bg-logo-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(1.8);
+            z-index: 0;
+            opacity: 0.35;
+            filter: blur(2px);
+        }
+        .bg-logo-container img {
+            width: 600px;
+            height: 600px;
+            object-fit: contain;
+        }
+        .right-panel {
+            flex: 1;
+            background: #130823;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 30px;
+            position: relative;
+        }
+
+        .glass-auth-card {
+            background: rgba(23, 10, 35, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            padding: 40px;
             width: 100%;
-        }
-        .max-w-md {
-            max-width: 28rem;
-        }
-        .block {
-            display: block;
-        }
-        .hidden {
-            display: none;
-        }
-        .space-y-4>*+* {
-            margin-top: 1rem;
+            max-width: 800px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+            position: relative;
+            z-index: 1;
         }
 
-        .bg-gray-100 {
-            background-color: #f3f4f6;
+        .neon-input-group {
+            margin-bottom: 16px;
+            position: relative;
         }
-        .bg-white {
-            background-color: #ffffff;
+        .neon-input {
+            width: 100%;
+            padding: 16px 20px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(236, 72, 153, 0.15);
+            border-radius: 12px;
+            color: white;
+            font-size: 15px;
+            transition: all 0.3s ease;
+            outline: none;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
         }
-        .bg-green-100 {
-            background-color: #d1fae5;
+        .neon-input:focus {
+            border-color: #ec4899;
+            box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.15), inset 0 2px 4px rgba(0, 0, 0, 0.2);
+            background: rgba(255, 255, 255, 0.08);
         }
-        .bg-red-100 {
-            background-color: #fee2e2;
-        }
-        .bg-indigo-600 {
-            background-color: #4f46e5;
-        }
-        .bg-indigo-700 {
-            background-color: #4338ca;
-        }
-        .bg-gray-50 {
-            background-color: #f9fafb;
-        }
-
-        .text-gray-700 {
-            color: #374151;
-        }
-        .text-gray-600 {
-            color: #4b5563;
-        }
-        .text-gray-500 {
-            color: #6b7280;
-        }
-        .text-white {
-            color: #ffffff;
-        }
-        .text-indigo-600 {
-            color: #4f46e5;
-        }
-        .text-green-700 {
-            color: #065f46;
-        }
-        .text-red-700 {
-            color: #991b1b;
-        }
-        .text-center {
-            text-align: center;
+        .neon-input::placeholder {
+            color: rgba(255, 255, 255, 0.35);
         }
 
-        .text-sm {
-            font-size: 0.875rem;
-        }
-        .text-2xl {
-            font-size: 1.5rem;
-        }
-        .font-medium {
-            font-weight: 500;
-        }
-        .font-bold {
+        .auth-btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #d946ef 0%, #ec4899 100%);
+            color: white;
             font-weight: 700;
-        }
-
-        .p-8 {
-            padding: 2rem;
-        }
-        .p-3 {
-            padding: 0.75rem;
-        }
-        .py-2 {
-            padding-top: 0.5rem;
-            padding-bottom: 0.5rem;
-        }
-        .px-4 {
-            padding-left: 1rem;
-            padding-right: 1rem;
-        }
-        .mt-1 {
-            margin-top: 0.25rem;
-        }
-        .mt-2 {
-            margin-top: 0.5rem;
-        }
-        .mt-4 {
-            margin-top: 1rem;
-        }
-        .mb-2 {
-            margin-bottom: 0.5rem;
-        }
-        .mb-4 {
-            margin-bottom: 1rem;
-        }
-        .mb-6 {
-            margin-bottom: 1.5rem;
-        }
-        .mr-2 {
-            margin-right: 0.5rem;
-        }
-
-        .rounded-md {
-            border-radius: 0.375rem;
-        }
-        .rounded-lg {
-            border-radius: 0.5rem;
-        }
-        .border {
-            border-width: 1px;
-        }
-        .border-gray-300 {
-            border-color: #d1d5db;
-        }
-        .border-gray-200 {
-            border-color: #e5e7eb;
-        }
-        .border-t {
-            border-top-width: 1px;
-        }
-        .pt-4 {
-            padding-top: 1rem;
-        }
-
-        .shadow-sm {
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-        }
-        .shadow-md {
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-
-        .focus\:border-indigo-500:focus {
-            border-color: #6366f1;
-        }
-        .focus\:ring-indigo-500:focus {
-            outline: none;
-            ring-color: #6366f1;
-        }
-
-        .hover\:bg-indigo-700:hover {
-            background-color: #4338ca;
-        }
-        .hover\:bg-green-700:hover {
-            background-color: #15803d;
-        }
-        .hover\:bg-gray-50:hover {
-            background-color: #f9fafb;
-        }
-        .hover\:underline:hover {
-            text-decoration: underline;
-        }
-        .hover\:text-gray-700:hover {
-            color: #374151;
-        }
-
-        .transition {
-            transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
-            transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-            transition-duration: 150ms;
-        }
-
-        input[type="email"],
-        input[type="password"],
-        input[type="text"] {
-            width: 100%;
-            padding: 0.5rem 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
-            font-size: 1rem;
-            line-height: 1.5;
-            transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-            background-color: #fff;
-        }
-        input[type="email"]:focus,
-        input[type="password"]:focus,
-        input[type="text"]:focus {
-            border-color: #6366f1;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
-        }
-
-        .btn-primary {
-            display: inline-block;
-            width: 100%;
-            padding: 0.5rem 1rem;
+            font-size: 17px;
             border: none;
-            border-radius: 0.375rem;
-            font-weight: 500;
-            font-size: 1rem;
-            color: #ffffff;
-            background-color: #4f46e5;
             cursor: pointer;
-            transition: background-color 0.15s ease;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(236, 72, 153, 0.3);
         }
-        .btn-primary:hover {
-            background-color: #4338ca;
+        .auth-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(236, 72, 153, 0.4);
         }
-        .btn-primary:focus {
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5);
-        }
-        .btn-primary:disabled {
+        .auth-btn:disabled {
             opacity: 0.7;
             cursor: not-allowed;
-        }
-
-        .btn-verify {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 0.375rem;
-            font-weight: 500;
-            font-size: 1rem;
-            color: #ffffff;
-            background-color: #16a34a;
-            cursor: pointer;
-            transition: background-color 0.15s ease;
-            white-space: nowrap;
-        }
-        .btn-verify:hover {
-            background-color: #15803d;
-        }
-        .btn-verify:disabled {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-
-        .btn-google {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            padding: 0.5rem 1rem;
-            border: 1px solid #d1d5db;
-            border-radius: 0.375rem;
-            background-color: #ffffff;
-            color: #374151;
-            font-weight: 500;
-            font-size: 1rem;
-            cursor: pointer;
-            transition: background-color 0.15s ease;
-            text-decoration: none;
-        }
-        .btn-google:hover {
-            background-color: #f9fafb;
-        }
-        .btn-google svg {
-            width: 1.25rem;
-            height: 1.25rem;
-            margin-right: 0.5rem;
+            transform: none;
         }
 
         .alert-success {
-            background-color: #d1fae5;
-            color: #065f46;
-            padding: 0.75rem;
-            border-radius: 0.375rem;
-            font-size: 0.875rem;
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+            color: #4ade80;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
         }
         .alert-error {
-            background-color: #fee2e2;
-            color: #991b1b;
-            padding: 0.75rem;
-            border-radius: 0.375rem;
-            font-size: 0.875rem;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #f87171;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
         }
         .alert-warning {
-            background-color: #fef3c7;
-            color: #92400e;
-            padding: 0.75rem;
-            border-radius: 0.375rem;
-            font-size: 0.875rem;
+            background: rgba(251, 191, 36, 0.15);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            color: #fbbf24;
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 14px;
         }
 
-        @media (max-width: 640px) {
-            .p-8 {
-                padding: 1.5rem;
+        .social-row {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .social-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            color: rgba(255, 255, 255, 0.4);
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.03);
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .social-btn:hover {
+            border-color: rgba(236, 72, 153, 0.4);
+            color: white;
+            transform: translateY(-3px);
+        }
+
+        /* OTP Section Styles */
+        .otp-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+        .otp-section h3 {
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .otp-section p {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 13px;
+            margin-bottom: 12px;
+        }
+        .otp-input-row {
+            display: flex;
+            gap: 10px;
+        }
+        .otp-input-row input {
+            flex: 1;
+            padding: 14px 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(236, 72, 153, 0.15);
+            border-radius: 12px;
+            color: white;
+            font-size: 16px;
+            letter-spacing: 4px;
+            text-align: center;
+            transition: all 0.3s ease;
+            outline: none;
+        }
+        .otp-input-row input:focus {
+            border-color: #ec4899;
+            box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.15);
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .btn-verify {
+            padding: 14px 24px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            color: white;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        .btn-verify:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.3);
+        }
+        .btn-verify:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .otp-actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 12px;
+        }
+        .otp-actions button {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.4);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .otp-actions button:hover {
+            color: #ec4899;
+        }
+        .otp-actions .text-neonpink {
+            color: #ec4899;
+        }
+        .resend-timer {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.3);
+            margin-top: 4px;
+        }
+
+        @media (max-width: 1024px) {
+            .split-screen {
+                flex-direction: column;
+                overflow-y: auto;
+                height: auto;
+                min-height: 100vh;
             }
-            .max-w-md {
+            .left-panel {
+                display: none;
+            }
+            .right-panel {
+                padding: 20px;
+                background: #0a0512;
+            }
+            .glass-auth-card {
+                padding: 25px;
+                border-radius: 16px;
                 max-width: 100%;
-                margin-left: 1rem;
-                margin-right: 1rem;
-            }
-            .text-2xl {
-                font-size: 1.25rem;
             }
         }
     </style>
 </head>
 
-<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+<body>
+    <div class="split-screen">
 
-    <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h1 class="text-2xl font-bold mb-6 text-center">Login</h1>
-
-        <!-- message banner -->
-        <div id="message" class="hidden mb-4"></div>
-
-        <form id="login-form" class="space-y-4">
-            <div>
-                <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
-                <input type="email" id="email" name="email" required />
+        <!-- ==================== LEFT PANEL ==================== -->
+        <div class="left-panel">
+            <div class="relative z-10 text-center max-w-lg mb-2">
+                <h1 class="text-4xl md:text-5xl font-extrabold text-white leading-tight drop-shadow-lg">Achieve More <br>With Every Step.</h1>
             </div>
-
-            <div>
-                <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
-                <input type="password" id="password" name="password" required />
+            <div class="bg-logo-container">
+                <img src="{{ asset('images/FitCoin_metallic_coin_emblem_logo_202607311418.jpeg') }}" alt="Background Logo">
             </div>
-
-            <button type="submit" class="btn-primary transition" id="login-btn">
-                Sign in
-            </button>
-        </form>
-
-        <!-- Google Login Button -->
-        <div class="mt-4">
-            <a href="/api/auth/google" class="btn-google transition">
-                <svg viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                Sign in with Google
-            </a>
+            <div class="relative z-10 ml-8">
+                <div class="flying-money" style="top: -30%; left: -20%; animation-delay: 0s; font-size: 2.5rem;"><i class="fas fa-money-bill-wave"></i></div>
+                <div class="flying-money" style="bottom: -20%; right: -30%; animation-delay: 3s; font-size: 3rem;"><i class="fas fa-coins"></i></div>
+                <div class="phone-perspective-wrapper">
+                    <div class="phone-frame">
+                        <div class="p-5 space-y-3">
+                            <div class="flex justify-between items-center">
+                                <div class="text-gray-400 text-xs">Good Morning,</div>
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-neonpink to-neonpurple border-2 border-neonpink/50"><img src="https://i.pravatar.cc/150?img=5" class="w-full h-full rounded-full object-cover"></div>
+                            </div>
+                            <div class="step-counter-container mx-auto">
+                                <div class="particle-field" id="sparkleField"></div>
+                                <div class="app-ring-chart"></div>
+                                <div class="app-ring-inner flex-col gap-0.5">
+                                    <span class="text-neonpink text-[10px] font-semibold">71.25%</span>
+                                    <span class="text-xl font-black text-white">14,250</span>
+                                    <span class="text-[9px] text-gray-400">STEPS</span>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 mt-2">
+                                <div class="app-btn btn-1 p-2 flex flex-col items-center text-center gap-1 min-h-[80px] justify-center relative">
+                                    <i class="fas fa-shoe-prints text-xl text-neonpink"></i>
+                                    <div class="font-bold text-[10px] leading-tight text-white">Double Steps</div>
+                                    <div class="text-[8px] text-gray-400 leading-tight">Watch ads!</div>
+                                </div>
+                                <div class="app-btn btn-2 p-2 flex flex-col items-center text-center gap-1 min-h-[80px] justify-center relative">
+                                    <i class="fas fa-coins text-xl text-neonpink"></i>
+                                    <div class="font-bold text-[10px] leading-tight text-white">Earn Coins</div>
+                                    <div class="text-[8px] text-gray-400 leading-tight">Daily Quests!</div>
+                                </div>
+                                <div class="app-btn btn-3 p-2 flex flex-col items-center text-center gap-1 min-h-[80px] justify-center relative">
+                                    <i class="fas fa-money-bill-wave text-xl text-neonpink"></i>
+                                    <div class="font-bold text-[10px] leading-tight text-white">Redeem Cash</div>
+                                    <div class="text-[8px] text-gray-400 leading-tight">Withdraw safely!</div>
+                                </div>
+                                <div class="app-btn btn-4 p-2 flex flex-col items-center text-center gap-1 min-h-[80px] justify-center relative">
+                                    <i class="fas fa-user-plus text-xl text-neonpink"></i>
+                                    <div class="font-bold text-[10px] leading-tight text-white">Profile & Invite</div>
+                                    <div class="text-[8px] text-gray-400 leading-tight">Invite Friends!</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="px-4 py-2 bg-gradient-to-t from-[#0a0512] to-transparent flex justify-between items-center text-sm relative">
+                            <i class="fas fa-home nav-icon-active"></i>
+                            <i class="fas fa-heartbeat nav-icon-inactive"></i>
+                            <i class="fas fa-chart-line nav-icon-inactive"></i>
+                            <i class="fas fa-user nav-icon-inactive"></i>
+                            <div class="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-20 h-1 bg-gray-600 rounded-full"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- OTP Verification Section (hidden initially) -->
-        <div id="otp-section" class="hidden mt-4 pt-4 border-t border-gray-200">
-            <h3 class="text-sm font-medium text-gray-700 mb-2">Verify Your Email</h3>
-            <p class="text-sm text-gray-600 mb-3">We sent a 6-digit OTP to your email. Please enter it below.</p>
-            <div class="flex gap-2">
-                <input type="text" id="otp-code" placeholder="Enter 6-digit code" maxlength="6"
-                       class="flex-1 px-3 py-2 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                <button type="button" id="verify-otp-btn" class="btn-verify">
-                    Verify
-                </button>
-            </div>
-            <div class="flex justify-between items-center mt-2">
-                <button type="button" id="resend-otp-btn" class="text-sm text-indigo-600 hover:underline">
-                    Resend OTP
-                </button>
-                <button type="button" id="back-to-login-btn" class="text-sm text-gray-500 hover:text-gray-700 hover:underline">
-                    Back to Login
-                </button>
-            </div>
-            <p id="resend-timer" class="text-xs text-gray-500 mt-1"></p>
-        </div>
+        <!-- ==================== RIGHT PANEL ==================== -->
+        <div class="right-panel">
+            <div class="glass-auth-card">
+                <div class="flex justify-center mb-6">
+                    <span class="text-2xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-neonpink to-neonpurple"><i class="fas fa-bolt text-neonpink mr-2"></i>Fitcoin</span>
+                </div>
 
-        <!-- Footer -->
-        <p class="mt-4 text-sm text-center text-gray-600">
-            <a href="/ForgotPassword" class="text-indigo-600 hover:underline">Forgot Password?</a>
-            <span class="mx-2">|</span>
-            Don't have an account? <a href="/register" class="text-indigo-600 hover:underline">Register</a>
-        </p>
+                <h3 class="text-xl font-bold mb-1">Welcome Back</h3>
+                <p class="text-sm text-gray-400 mb-4">Access your fitness journey.</p>
+
+                <!-- Message Display -->
+                <div id="message" class="mb-4 hidden"></div>
+
+                <form id="login-form">
+                    <div class="neon-input-group">
+                        <input type="email" id="email" name="email" placeholder="Email Address" required class="neon-input">
+                    </div>
+                    <div class="neon-input-group">
+                        <input type="password" id="password" name="password" placeholder="Password" required class="neon-input">
+                    </div>
+
+                    <div class="flex justify-between items-center text-sm text-gray-400 mb-4">
+                        <label class="flex items-center gap-2 cursor-pointer hover:text-white transition">
+                            <input type="checkbox" class="accent-neonpink bg-transparent border-white/20 rounded h-4 w-4"> Remember Me
+                        </label>
+                        <a href="/ForgotPassword" class="hover:text-neonpink transition">Forgot Password?</a>
+                    </div>
+
+                    <button type="submit" id="login-btn" class="auth-btn">
+                        <i class="fas fa-sign-in-alt mr-2"></i> Log In
+                    </button>
+                </form>
+
+                <!-- Social Login Buttons -->
+                <div class="social-row">
+                    <a href="/api/auth/google" class="social-btn" title="Sign in with Google">
+                        <i class="fab fa-google text-red-400"></i>
+                    </a>
+                    <a href="/api/auth/apple" class="social-btn" title="Sign in with Apple">
+                        <i class="fab fa-apple text-white"></i>
+                    </a>
+                </div>
+
+                <div class="relative my-4">
+                    <div class="absolute inset-0 flex items-center">
+                        <div class="w-full border-t border-gray-700/30"></div>
+                    </div>
+                    <div class="relative flex justify-center text-xs">
+                        <span class="px-4 bg-[#130823] text-gray-500">or continue with</span>
+                    </div>
+                </div>
+
+                <!-- OTP Verification Section -->
+                <div id="otp-section" class="otp-section hidden">
+                    <h3>Verify Your Email</h3>
+                    <p>We sent a 6-digit OTP to your email. Please enter it below.</p>
+                    <div class="otp-input-row">
+                        <input type="text" id="otp-code" placeholder="Enter code" maxlength="6" autocomplete="off">
+                        <button type="button" id="verify-otp-btn" class="btn-verify">Verify</button>
+                    </div>
+                    <div class="otp-actions">
+                        <button type="button" id="resend-otp-btn">Resend OTP</button>
+                        <button type="button" id="back-to-login-btn" class="text-neonpink">Back to Login</button>
+                    </div>
+                    <p id="resend-timer" class="resend-timer"></p>
+                </div>
+
+                <p class="mt-4 text-sm text-center text-gray-400">
+                    Don't have an account? <a href="/register" class="text-neonpink hover:underline">Register</a>
+                </p>
+            </div>
+
+            <div class="mt-6 flex justify-between items-center w-full max-w-[800px] text-[10px] text-gray-500 px-2">
+                <span>Fitcoin Inc. 2024</span>
+                <div class="flex gap-4">
+                    <a href="#" class="hover:text-white transition"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="hover:text-white transition"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#" class="hover:text-white transition"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
         (function() {
             'use strict';
 
-            // ── Auto‑login from OAuth callback ──
-            const urlParams = new URLSearchParams(window.location.search);
-            const token = urlParams.get('token');
-            const refreshToken = urlParams.get('refresh_token');
+            // ── Sparkle particles ──
+            document.addEventListener("DOMContentLoaded", function() {
+                const field = document.getElementById('sparkleField');
+                if (field) {
+                    for (let i = 0; i < 30; i++) {
+                        const spark = document.createElement('div');
+                        spark.className = 'sparkle';
+                        const size = Math.random() * 3 + 1;
+                        spark.style.width = size + 'px';
+                        spark.style.height = size + 'px';
+                        spark.style.left = Math.random() * 100 + '%';
+                        spark.style.top = Math.random() * 100 + '%';
+                        const angle = Math.random() * 360;
+                        const distance = Math.random() * 100 + 20;
+                        spark.style.setProperty('--tx', Math.cos(angle) * distance + 'px');
+                        spark.style.setProperty('--ty', Math.sin(angle) * distance + 'px');
+                        spark.style.setProperty('--duration', (Math.random() * 2 + 1) + 's');
+                        spark.style.animationDelay = Math.random() * 3 + 's';
+                        field.appendChild(spark);
+                    }
+                }
+            });
 
-            if (token) {
-                localStorage.setItem('access_token', token);
-                if (refreshToken) localStorage.setItem('refresh_token', refreshToken);
-                // Clean URL and redirect
-                window.history.replaceState({}, document.title, window.location.pathname);
-                window.location.href = '/dashboard';
-                return; // stop further execution
-            }
-
-            // ── Device‑in‑use error handling ──
-            const errorParam = urlParams.get('error');
-            if (errorParam === 'device_in_use') {
-                // showMessage must be defined before this – it is defined below
-                // We'll call it after the functions are defined; we'll move it after the function declarations.
-                // For now, we store a flag to show later.
-                window._deviceError = true;
-                window._deviceErrorMsg = 'This device is currently in use by another account. Please logout first.';
-                // Clean the URL
-                window.history.replaceState({}, document.title, window.location.pathname);
-            }
-
-            // ── Existing login logic ──
+            // ── DOM refs ──
             const form = document.getElementById('login-form');
             const messageEl = document.getElementById('message');
             const loginBtn = document.getElementById('login-btn');
@@ -440,14 +665,18 @@
             const resendBtn = document.getElementById('resend-otp-btn');
             const backToLoginBtn = document.getElementById('back-to-login-btn');
             const timerEl = document.getElementById('resend-timer');
+            const emailInput = document.getElementById('email');
+            const passwordInput = document.getElementById('password');
 
             let pendingEmail = null;
             let resendTimer = null;
             let resendCountdown = 60;
 
+            // ── Message helpers ──
             function showMessage(text, type = 'success') {
                 messageEl.textContent = text;
-                messageEl.className = 'mb-4 ' + (type === 'success' ? 'alert-success' : type === 'warning' ? 'alert-warning' : 'alert-error');
+                messageEl.className = 'mb-4 ' + (type === 'success' ? 'alert-success' : type === 'warning' ? 'alert-warning' :
+                    'alert-error');
                 messageEl.classList.remove('hidden');
             }
 
@@ -455,17 +684,12 @@
                 messageEl.classList.add('hidden');
             }
 
-            // If we have a pending device error, show it now
-            if (window._deviceError) {
-                showMessage(window._deviceErrorMsg, 'error');
-                delete window._deviceError;
-                delete window._deviceErrorMsg;
-            }
-
+            // ── OTP UI helpers ──
             function showOTPSection(email) {
                 pendingEmail = email;
                 otpSection.classList.remove('hidden');
-                form.querySelectorAll('input').forEach(input => input.disabled = true);
+                emailInput.disabled = true;
+                passwordInput.disabled = true;
                 loginBtn.disabled = true;
                 otpInput.focus();
                 startResendTimer();
@@ -473,7 +697,8 @@
 
             function hideOTPSection() {
                 otpSection.classList.add('hidden');
-                form.querySelectorAll('input').forEach(input => input.disabled = false);
+                emailInput.disabled = false;
+                passwordInput.disabled = false;
                 loginBtn.disabled = false;
                 if (resendTimer) {
                     clearInterval(resendTimer);
@@ -485,7 +710,7 @@
                 if (resendTimer) clearInterval(resendTimer);
                 resendCountdown = 60;
                 resendBtn.disabled = true;
-                resendBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                resendBtn.style.opacity = '0.5';
                 timerEl.textContent = `Resend available in ${resendCountdown}s`;
                 resendTimer = setInterval(() => {
                     resendCountdown--;
@@ -494,18 +719,39 @@
                         clearInterval(resendTimer);
                         resendTimer = null;
                         resendBtn.disabled = false;
-                        resendBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                        resendBtn.style.opacity = '1';
                         timerEl.textContent = 'Ready to resend';
                     }
                 }, 1000);
             }
 
+            // ── Auto‑login from OAuth callback ──
+            const urlParams = new URLSearchParams(window.location.search);
+            const token = urlParams.get('token');
+            const refreshToken = urlParams.get('refresh_token');
+
+            if (token) {
+                localStorage.setItem('access_token', token);
+                if (refreshToken) localStorage.setItem('refresh_token', refreshToken);
+                window.history.replaceState({}, document.title, window.location.pathname);
+                window.location.href = '/dashboard';
+                return;
+            }
+
+            // ── Device‑in‑use error handling ──
+            const errorParam = urlParams.get('error');
+            if (errorParam === 'device_in_use') {
+                showMessage('This device is currently in use by another account. Please logout first.', 'error');
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            // ── Login form submit ──
             form.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 hideMessage();
 
-                const email = document.getElementById('email').value.trim();
-                const password = document.getElementById('password').value.trim();
+                const email = emailInput.value.trim();
+                const password = passwordInput.value.trim();
 
                 if (!email || !password) {
                     showMessage('Please fill in all fields.', 'error');
@@ -519,7 +765,7 @@
 
                 try {
                     loginBtn.disabled = true;
-                    loginBtn.textContent = 'Logging in...';
+                    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Logging in...';
 
                     const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
 
@@ -540,12 +786,12 @@
                             showMessage(data.message || 'Please verify your email first.', 'warning');
                             showOTPSection(email);
                             loginBtn.disabled = false;
-                            loginBtn.textContent = 'Sign in';
+                            loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Log In';
                             return;
                         }
                         showMessage(data.error || data.message || 'Login failed. Please try again.', 'error');
                         loginBtn.disabled = false;
-                        loginBtn.textContent = 'Sign in';
+                        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Log In';
                         return;
                     }
 
@@ -563,10 +809,11 @@
                 } catch (err) {
                     showMessage('Network error – please check your connection and try again.', 'error');
                     loginBtn.disabled = false;
-                    loginBtn.textContent = 'Sign in';
+                    loginBtn.innerHTML = '<i class="fas fa-sign-in-alt mr-2"></i> Log In';
                 }
             });
 
+            // ── Verify OTP ──
             verifyBtn.addEventListener('click', async function() {
                 const code = otpInput.value.trim();
                 if (!code || code.length !== 6) {
@@ -607,7 +854,7 @@
                     }
 
                     hideOTPSection();
-                    document.getElementById('password').value = '';
+                    passwordInput.value = '';
                     otpInput.value = '';
                     verifyBtn.disabled = false;
                     verifyBtn.textContent = 'Verify';
@@ -623,6 +870,7 @@
                 }
             });
 
+            // ── Resend OTP ──
             resendBtn.addEventListener('click', async function() {
                 resendBtn.disabled = true;
                 resendBtn.textContent = 'Sending...';
@@ -659,31 +907,32 @@
                 }
             });
 
+            // ── Back to Login ──
             backToLoginBtn.addEventListener('click', function() {
                 hideOTPSection();
                 hideMessage();
                 otpInput.value = '';
-                document.getElementById('password').value = '';
-                document.getElementById('email').focus();
+                passwordInput.value = '';
+                emailInput.focus();
             });
 
-            document.addEventListener('input', function(e) {
-                if (e.target && e.target.id === 'otp-code') {
-                    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 6);
-                }
+            // ── OTP input validation ──
+            otpInput.addEventListener('input', function() {
+                this.value = this.value.replace(/\D/g, '').slice(0, 6);
             });
 
-            document.addEventListener('keydown', function(e) {
-                if (e.target && e.target.id === 'otp-code' && e.key === 'Enter') {
+            otpInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
                     e.preventDefault();
                     if (!verifyBtn.disabled) verifyBtn.click();
                 }
             });
 
+            // ── Check for saved pending verification ──
             const savedEmail = localStorage.getItem('pending_login_verification');
             if (savedEmail) {
                 setTimeout(() => {
-                    document.getElementById('email').value = savedEmail;
+                    emailInput.value = savedEmail;
                     showOTPSection(savedEmail);
                     showMessage('Please verify your email to continue.', 'warning');
                     localStorage.removeItem('pending_login_verification');
@@ -692,6 +941,5 @@
 
         })();
     </script>
-
 </body>
 </html>
