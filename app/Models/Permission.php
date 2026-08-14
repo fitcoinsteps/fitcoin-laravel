@@ -2,16 +2,25 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Permission extends Model
 {
-    use HasFactory, SoftDeletes;
+    use SoftDeletes;
 
-    protected $table = 'permissions';
-    protected $guarded = [];
+    protected $fillable = [
+        'uuid',
+        'module',
+        'name',
+        'slug',
+        'description',
+        'group_name',
+        'is_system',
+        'deleted_by',
+        'is_deleted',
+    ];
+
     protected $casts = [
         'is_system' => 'boolean',
         'is_deleted' => 'boolean',
@@ -19,14 +28,14 @@ class Permission extends Model
 
     public function roles()
     {
-        return $this->belongsToMany(Role::class, 'rolepermissions', 'permission_id', 'role_id')
-                    ->withTimestamps();
+        return $this->belongsToMany(Role::class, 'role_permissions')
+                    ->wherePivot('is_deleted', 0);
     }
 
     public function users()
     {
-        return $this->belongsToMany(User::class, 'userpermissions', 'permission_id', 'user_id')
-                    ->withPivot('allowed', 'assigned_by')
-                    ->withTimestamps();
+        return $this->belongsToMany(User::class, 'user_permissions')
+                    ->withPivot('allowed')
+                    ->wherePivot('is_deleted', 0);
     }
 }
