@@ -107,20 +107,38 @@ class User extends Authenticatable implements JWTSubject
                     ->withPivot('allowed')
                     ->wherePivot('is_deleted', 0);
     }
-public function devices()
-{
-    return $this->hasMany(Device::class);
-}
 
-public function loginHistories()
-{
-    return $this->hasMany(LoginHistory::class);
-}
+    public function devices()
+    {
+        return $this->hasMany(Device::class);
+    }
+
+    public function loginHistories()
+    {
+        return $this->hasMany(LoginHistory::class);
+    }
+
     /**
      * Get the JWT tokens owned by the user.
      */
     public function jwtTokens()
     {
         return $this->hasMany(JwtToken::class);
+    }
+
+    /**
+     * Check if the user has a specific role slug.
+     */
+    public function hasRole(string $roleSlug): bool
+    {
+        return $this->roles->contains('slug', $roleSlug);
+    }
+
+    /**
+     * Check if the user has any of the given role slugs.
+     */
+    public function hasAnyRole(array $roleSlugs): bool
+    {
+        return $this->roles->pluck('slug')->intersect($roleSlugs)->isNotEmpty();
     }
 }

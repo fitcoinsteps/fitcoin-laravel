@@ -404,6 +404,16 @@
         (function() {
             'use strict';
 
+            // ── Helper: redirect based on user roles ──
+            function redirectBasedOnRole(user) {
+                const roles = user.roles.map(r => r.slug);
+                let redirectUrl = '/user/dashboard'; // default
+                if (roles.includes('super-admin') || roles.includes('admin')) {
+                    redirectUrl = '/admin/dashboard';
+                }
+                window.location.href = redirectUrl;
+            }
+
             // ── Auto‑login from OAuth callback ──
             const urlParams = new URLSearchParams(window.location.search);
             const token = urlParams.get('token');
@@ -412,21 +422,36 @@
             if (token) {
                 localStorage.setItem('access_token', token);
                 if (refreshToken) localStorage.setItem('refresh_token', refreshToken);
-                // Clean URL and redirect
+                // Clean URL
                 window.history.replaceState({}, document.title, window.location.pathname);
-                window.location.href = '/dashboard';
-                return; // stop further execution
+
+                // Fetch user profile to determine roles (since social callback doesn't include user object)
+                fetch('/api/me', {
+                    headers: {
+                        'Authorization': 'Bearer ' + token,
+                        'Accept': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        // Invalid token, redirect to login with error
+                        showMessage('Authentication failed. Please login again.', 'error');
+                    } else {
+                        redirectBasedOnRole(data);
+                    }
+                })
+                .catch(() => {
+                    showMessage('Network error during authentication. Please try again.', 'error');
+                });
+                return;
             }
 
             // ── Device‑in‑use error handling ──
             const errorParam = urlParams.get('error');
             if (errorParam === 'device_in_use') {
-                // showMessage must be defined before this – it is defined below
-                // We'll call it after the functions are defined; we'll move it after the function declarations.
-                // For now, we store a flag to show later.
                 window._deviceError = true;
                 window._deviceErrorMsg = 'This device is currently in use by another account. Please logout first.';
-                // Clean the URL
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
 
@@ -556,8 +581,9 @@
 
                     showMessage('Login successful! Redirecting…', 'success');
 
-                    setTimeout(function() {
-                        window.location.href = '/dashboard';
+                    // Use roles from response to redirect
+                    setTimeout(() => {
+                        redirectBasedOnRole(data.user);
                     }, 1000);
 
                 } catch (err) {
@@ -612,8 +638,9 @@
                     verifyBtn.disabled = false;
                     verifyBtn.textContent = 'Verify';
 
-                    setTimeout(function() {
-                        window.location.href = '/dashboard';
+                    setTimeout(() => {
+                        // After OTP verification, we have user data; redirect based on roles
+                        redirectBasedOnRole(data.user);
                     }, 1500);
 
                 } catch (error) {
@@ -682,7 +709,7 @@
 
             const savedEmail = localStorage.getItem('pending_login_verification');
             if (savedEmail) {
-                setTimeout(() => {
+                setTimeout(() => {  
                     document.getElementById('email').value = savedEmail;
                     showOTPSection(savedEmail);
                     showMessage('Please verify your email to continue.', 'warning');

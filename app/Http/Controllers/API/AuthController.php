@@ -107,6 +107,9 @@ class AuthController extends Controller
 
         $tokens = JwtTokenHelper::generateTokens($user);
 
+        // Load roles for the authenticated user
+        $user->load('roles');
+
         return response()->json([
             'access_token' => $tokens['access_token'],
             'token_type'   => 'bearer',
@@ -304,41 +307,6 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             Log::error('Login notification failed: ' . $e->getMessage());
         }
-    }
-
-    public function logout(Request $request): \Illuminate\Http\JsonResponse
-    {
-        try {
-            $user = $this->authUser();
-
-            if ($user) {
-                $fingerprint = hash('sha256', $request->ip() . $request->userAgent() . $user->id);
-                Device::where('user_id', $user->id)
-                    ->where('fingerprint', $fingerprint)
-                    ->update(['revoked_at' => now()]);
-            }
-
-            $this->guard()->logout();
-            return response()->json(['message' => 'Logged out successfully']);
-        } catch (\Exception $e) {
-            return response()->json(['message' => 'Already logged out'], 200);
-        }
-    }
-
-    public function revokeAllSessions(): \Illuminate\Http\JsonResponse
-    {
-        $user = $this->authUser();
-
-        if ($user) {
-            Device::where('user_id', $user->id)->update(['revoked_at' => now()]);
-            DB::table('jwt_tokens')->where('user_id', $user->id)->update(['revoked' => true]);
-        }
-
-        $this->guard()->logout();
-
-        return response()->json([
-            'message' => 'All sessions revoked successfully'
-        ]);
     }
 
     public function loginHistory(Request $request): \Illuminate\Http\JsonResponse

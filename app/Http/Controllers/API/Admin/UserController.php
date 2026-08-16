@@ -20,8 +20,8 @@ class UserController extends Controller
     }
 
     /**
-     * Store a newly created user (by admin).
-     * The 'users' role is not allowed – normal users must register themselves.
+     * Store a newly created user (by super-admin).
+     * Allowed roles: admin (or any role except 'users' and 'super-admin').
      */
     public function store(Request $request)
     {
@@ -34,10 +34,12 @@ class UserController extends Controller
                 'required',
                 'string',
                 'exists:roles,slug',
-                // Block assigning the 'users' role
                 function ($attribute, $value, $fail) {
                     if ($value === 'users') {
                         $fail('The users role cannot be assigned by an admin. Users must register themselves.');
+                    }
+                    if ($value === 'super-admin') {
+                        $fail('Only one super-admin is allowed. You cannot create another super-admin.');
                     }
                 },
             ],
@@ -45,7 +47,7 @@ class UserController extends Controller
 
         $user = User::create([
             'uuid'       => (string) Str::uuid(),
-            'username'   => $data['email'],   // you can accept a custom username if needed
+            'username'   => $data['email'],
             'first_name' => $data['first_name'],
             'last_name'  => $data['last_name'],
             'email'      => $data['email'],
@@ -71,7 +73,6 @@ class UserController extends Controller
 
     /**
      * Update the specified user (basic fields only).
-     * You can extend this later as needed.
      */
     public function update(Request $request, User $user)
     {
@@ -93,16 +94,20 @@ class UserController extends Controller
 
     /**
      * Remove the specified user (soft delete).
+     * Prevent deleting the super-admin.
      */
     public function destroy(User $user)
     {
+        if ($user->hasRole('super-admin')) {
+            return response()->json(['error' => 'Cannot delete the super-admin account.'], 403);
+        }
         $user->delete();
         return response()->json(['message' => 'User deleted']);
     }
 
     /**
-     * Assign or change the role of a user (admin only).
-     * The 'users' role is not allowed – normal users must register themselves.
+     * Assign or change the role of a user (super-admin only).
+     * The 'users' role is not allowed, and 'super-admin' cannot be assigned to anyone.
      */
     public function assignRole(Request $request, User $user)
     {
@@ -111,17 +116,23 @@ class UserController extends Controller
                 'required',
                 'string',
                 'exists:roles,slug',
-                // Block assigning the 'users' role
                 function ($attribute, $value, $fail) {
                     if ($value === 'users') {
                         $fail('The users role cannot be assigned manually. Users must register themselves.');
+                    }
+                    if ($value === 'super-admin') {
+                        $fail('Only one super-admin is allowed. You cannot assign the super-admin role.');
                     }
                 },
             ],
         ]);
 
+        // Prevent changing the super-admin's role
+        if ($user->hasRole('super-admin')) {
+            return response()->json(['error' => 'Cannot change the role of the super-admin account.'], 403);
+        }
+
         $role = Role::where('slug', $data['role'])->first();
-        // Replace all current roles with the new one
         $user->roles()->sync([$role->id => ['assigned_at' => now()]]);
 
         return response()->json(['message' => 'Role updated']);

@@ -14,6 +14,8 @@ use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Two\AbstractProvider;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class SocialAuthController extends Controller
 {
@@ -42,24 +44,35 @@ class SocialAuthController extends Controller
             $user = User::where('email', $socialUser->getEmail())->first();
 
             if (!$user) {
-                $isFirstUser = User::count() === 0;
-                RoleService::createDefaultRolesIfNeeded();
+                $isFirstUser = false;
+                DB::beginTransaction();
+                try {
+                    $userCount = User::lockForUpdate()->count();
+                    $isFirstUser = $userCount === 0;
+                    RoleService::createDefaultRolesIfNeeded();
 
-                $user = User::create([
-                    'uuid'              => (string) Str::uuid(),
-                    'username'          => $socialUser->getEmail(),
-                    'first_name'        => $socialUser->user['given_name'] ?? $socialUser->getName(),
-                    'last_name'         => $socialUser->user['family_name'] ?? '',
-                    'email'             => $socialUser->getEmail(),
-                    'email_verified_at' => now(),
-                    'password'          => bcrypt(Str::random(32)),
-                    'status'            => 'active',
-                    'is_active'         => true,
-                ]);
+                    $user = User::create([
+                        'uuid'              => (string) Str::uuid(),
+                        'username'          => $socialUser->getEmail(),
+                        'first_name'        => $socialUser->user['given_name'] ?? $socialUser->getName(),
+                        'last_name'         => $socialUser->user['family_name'] ?? '',
+                        'email'             => $socialUser->getEmail(),
+                        'email_verified_at' => now(),
+                        'password'          => bcrypt(Str::random(32)),
+                        'status'            => 'active',
+                        'is_active'         => true,
+                    ]);
 
-                $roleSlug = $isFirstUser ? 'super-admin' : 'users';
-                $role = Role::where('slug', $roleSlug)->first();
-                $user->roles()->attach($role->id, ['assigned_at' => now()]);
+                    $roleSlug = $isFirstUser ? 'super-admin' : 'users';
+                    $role = Role::where('slug', $roleSlug)->first();
+                    $user->roles()->attach($role->id, ['assigned_at' => now()]);
+                    DB::commit();
+                } catch (\Exception $e) {
+                    DB::rollBack();
+                    Log::error('Social registration failed: ' . $e->getMessage());
+                    $frontendUrl = config('app.frontend_url', '/login');
+                    return redirect()->away($frontendUrl . '?error=registration_failed');
+                }
             }
 
             $user->socialAccounts()->create([

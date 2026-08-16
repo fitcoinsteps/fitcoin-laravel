@@ -87,7 +87,7 @@
             const urlParams = new URLSearchParams(window.location.search);
             const email = urlParams.get('email');
             const type = urlParams.get('type') || 'registration';
-            const resetToken = urlParams.get('token') || null;
+            let resetToken = urlParams.get('token') || null;
 
             if (!email) {
                 window.location.href = (type === 'password_reset') ? '/ForgotPassword' : '/register';
@@ -141,7 +141,7 @@
                 try {
                     let endpoint, body;
                     if (type === 'password_reset') {
-                        endpoint = '/api/forgot-password';      // ✅ correct lowercase
+                        endpoint = '/api/forgot-password';
                         body = { email: decodedEmail };
                     } else {
                         endpoint = '/api/resend-otp';
@@ -172,7 +172,6 @@
                         const newUrl = new URL(window.location.href);
                         newUrl.searchParams.set('token', data.token);
                         window.history.replaceState({}, '', newUrl);
-                        // Also update the variable
                         resetToken = data.token;
                     }
 
@@ -186,6 +185,16 @@
                 } finally {
                     resendBtn.textContent = 'Resend OTP';
                 }
+            }
+
+            // Role-based redirect function (same as login page)
+            function redirectBasedOnRole(user) {
+                const roles = user.roles.map(r => r.slug);
+                let redirectUrl = '/user/dashboard'; // default
+                if (roles.includes('super-admin') || roles.includes('admin')) {
+                    redirectUrl = '/admin/dashboard';
+                }
+                window.location.href = redirectUrl;
             }
 
             async function handleVerify(code) {
@@ -239,7 +248,7 @@
                             window.location.href = `/reset-password?token=${resetToken}&email=${encodeURIComponent(decodedEmail)}`;
                         }, 1500);
                     } else {
-                        // Registration
+                        // Registration success
                         if (data.token) {
                             localStorage.setItem('access_token', data.token);
                         }
@@ -250,8 +259,15 @@
                         otpInput.disabled = true;
                         verifyBtn.disabled = true;
                         verifyBtn.textContent = 'Verified ✓';
+
+                        // Redirect based on roles returned from the verify endpoint
                         setTimeout(() => {
-                            window.location.href = '/dashboard';
+                            if (data.user && data.user.roles) {
+                                redirectBasedOnRole(data.user);
+                            } else {
+                                // Fallback to /dashboard if user data missing
+                                window.location.href = '/dashboard';
+                            }
                         }, 1500);
                     }
 
