@@ -30,76 +30,91 @@ class SocialAuthController extends Controller
 
     public function callback(string $provider, Request $request): RedirectResponse
     {
-        /** @var AbstractProvider $driver */
-        $driver = Socialite::driver($provider);
-        $socialUser = $driver->stateless()->user();
+        try {
+            /** @var AbstractProvider $driver */
+            $driver = Socialite::driver($provider);
+            $socialUser = $driver->stateless()->user();
 
-        $socialAccount = SocialAccount::where('provider', $provider)
-                            ->where('provider_id', $socialUser->getId())
-                            ->first();
+            $email = $socialUser->getEmail();
+            $firstName = $socialUser->user['given_name'] ?? $socialUser->getName() ?? '';
+            $lastName = $socialUser->user['family_name'] ?? '';
 
-        if ($socialAccount) {
-            $user = $socialAccount->user;
-        } else {
-            $user = User::where('email', $socialUser->getEmail())->first();
-
-            if (!$user) {
-                $isFirstUser = false;
-                DB::beginTransaction();
-                try {
-                    $userCount = User::lockForUpdate()->count();
-                    $isFirstUser = $userCount === 0;
-                    RoleService::createDefaultRolesIfNeeded();
-
-                    $user = User::create([
-                        'uuid'              => (string) Str::uuid(),
-                        'username'          => $socialUser->getEmail(),
-                        'first_name'        => $socialUser->user['given_name'] ?? $socialUser->getName(),
-                        'last_name'         => $socialUser->user['family_name'] ?? '',
-                        'email'             => $socialUser->getEmail(),
-                        'email_verified_at' => now(),
-                        'password'          => bcrypt(Str::random(32)),
-                        'status'            => 'active',
-                        'is_active'         => true,
-                    ]);
-
-                    $roleSlug = $isFirstUser ? 'super-admin' : 'users';
-                    $role = Role::where('slug', $roleSlug)->first();
-                    $user->roles()->attach($role->id, ['assigned_at' => now()]);
-                    DB::commit();
-                } catch (\Exception $e) {
-                    DB::rollBack();
-                    Log::error('Social registration failed: ' . $e->getMessage());
-                    $frontendUrl = config('app.frontend_url', '/login');
-                    return redirect()->away($frontendUrl . '?error=registration_failed');
-                }
+            if (!$email) {
+                $email = $socialUser->getId() . '@apple.user';
             }
 
-            $user->socialAccounts()->create([
-                'provider'    => $provider,
-                'provider_id' => $socialUser->getId(),
+            $socialAccount = SocialAccount::where('provider', $provider)
+                                ->where('provider_id', $socialUser->getId())
+                                ->first();
+
+            if ($socialAccount) {
+                $user = $socialAccount->user;
+            } else {
+                $user = User::where('email', $email)->first();
+
+                if (!$user) {
+                    DB::beginTransaction();
+                    try {
+                        RoleService::createDefaultRolesIfNeeded();
+
+                        $user = User::create([
+                            'uuid'              => (string) Str::uuid(),
+                            'username'          => $email,
+                            'first_name'        => $firstName,
+                            'last_name'         => $lastName,
+                            'email'             => $email,
+                            'email_verified_at' => now(),
+                            'password'          => bcrypt(Str::random(32)),
+                            'status'            => 'active',
+                            'is_active'         => true,
+                        ]);
+
+                        // Always assign 'users' role for social auth (not super-admin)
+                        $role = Role::where('slug', 'users')->first();
+                        if ($role) {
+                            $user->roles()->attach($role->id, ['assigned_at' => now()]);
+                        }
+                        DB::commit();
+                    } catch (\Exception $e) {
+                        DB::rollBack();
+                        Log::error('Social registration failed: ' . $e->getMessage());
+                        return redirect()->to('/login?error=registration_failed');
+                    }
+                }
+
+                $user->socialAccounts()->create([
+                    'provider'    => $provider,
+                    'provider_id' => $socialUser->getId(),
+                ]);
+            }
+
+            if (!$user->is_active || $user->is_locked) {
+                return redirect()->to('/login?error=account_disabled');
+            }
+
+            $ip        = $request->ip();
+            $userAgent = $request->userAgent();
+
+            if (!$this->isDeviceAvailable($ip, $userAgent, $user->id)) {
+                return redirect()->to('/login?error=device_in_use');
+            }
+
+            $deviceName = ucfirst($provider) . ' OAuth';
+            $this->checkDevice($user, $ip, $userAgent, $deviceName, true);
+
+            $user->update([
+                'last_login_at'    => now(),
+                'last_activity_at' => now(),
             ]);
+
+            $tokens = JwtTokenHelper::generateTokens($user);
+
+            // Redirect to login page with token - login page will handle redirect to /user/dashboard
+            return redirect()->to('/login?token=' . $tokens['access_token'] . '&refresh_token=' . ($tokens['refresh_token'] ?? ''));
+
+        } catch (\Exception $e) {
+            Log::error('Social auth callback failed: ' . $e->getMessage());
+            return redirect()->to('/login?error=social_auth_failed');
         }
-
-        $ip        = $request->ip();
-        $userAgent = $request->userAgent();
-
-        // ── Device availability check ──
-        if (!$this->isDeviceAvailable($ip, $userAgent, $user->id)) {
-            $frontendUrl = config('app.frontend_url', '/login');
-            return redirect()->away($frontendUrl . '?error=device_in_use');
-        }
-
-        // ── Register/update device ──
-        $this->checkDevice($user, $ip, $userAgent, 'Google OAuth', true);
-
-        $user->update(['last_login_at' => now()]);
-
-        $tokens = JwtTokenHelper::generateTokens($user);
-
-        $frontendUrl = config('app.frontend_url', '/login');
-        return redirect()->away(
-            $frontendUrl . '?token=' . $tokens['access_token'] . '&refresh_token=' . ($tokens['refresh_token'] ?? '')
-        );
     }
 }
