@@ -249,7 +249,7 @@ class AuthController extends Controller
     private function logFailedAttempt(string $email, string $ip, string $userAgent): void
     {
         LoginHistory::create([
-            'email'      => $email,
+            'email'      => $email,jwt
             'ip_address' => $ip,
             'user_agent' => $userAgent,
             'status'     => 'failed',
