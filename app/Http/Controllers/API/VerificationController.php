@@ -12,6 +12,7 @@ use App\Helpers\JwtTokenHelper;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class VerificationController extends Controller
@@ -74,20 +75,26 @@ class VerificationController extends Controller
             return response()->json(['message' => 'Registration record not found.'], 404);
         }
 
-        $isFirstUser = User::count() === 0;
-        $user = User::create([
-            'uuid'              => (string) Str::uuid(),
-            'email'             => $registration->email,
-            'phone'             => $registration->phone,
-            'username'          => $registration->username,
-            'password'          => $registration->password,
-            'first_name'        => $registration->first_name,
-            'last_name'         => $registration->last_name,
-            'email_verified_at' => now(),
-            'is_active'         => 1,
-        ]);
-
+        $isFirstUser = false;
         try {
+            DB::beginTransaction();
+
+            // Lock the users table to prevent concurrent first-user race
+            $userCount = User::lockForUpdate()->count();
+            $isFirstUser = $userCount === 0;
+
+            $user = User::create([
+                'uuid'              => (string) Str::uuid(),
+                'email'             => $registration->email,
+                'phone'             => $registration->phone,
+                'username'          => $registration->username,
+                'password'          => $registration->password,
+                'first_name'        => $registration->first_name,
+                'last_name'         => $registration->last_name,
+                'email_verified_at' => now(),
+                'is_active'         => 1,
+            ]);
+
             RoleService::createDefaultRolesIfNeeded();
             $roleSlug = $isFirstUser ? 'super-admin' : 'users';
             $role = \App\Models\Role::where('slug', $roleSlug)->first();
@@ -98,13 +105,17 @@ class VerificationController extends Controller
                 ]);
                 Log::info("User {$user->email} registered as {$roleSlug}");
             }
+
+            $registration->delete();
+            DB::commit();
         } catch (\Exception $e) {
-            Log::error('Could not assign role: ' . $e->getMessage());
+            DB::rollBack();
+            Log::error('Registration failed: ' . $e->getMessage());
+            return response()->json(['message' => 'Registration failed. Please try again.'], 500);
         }
 
-        $registration->delete();
-
         $tokens = JwtTokenHelper::generateSimpleTokens($user);
+        $user->load('roles');
 
         return response()->json([
             'message'    => 'Registration completed successfully!',

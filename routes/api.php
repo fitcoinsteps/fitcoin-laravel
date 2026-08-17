@@ -7,10 +7,10 @@ use App\Http\Controllers\Api\VerificationController;
 use App\Http\Controllers\Api\Admin\RoleController;
 use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\PermissionController;
-use App\Http\Middleware\CheckRole;
 use App\Http\Controllers\Api\SocialAuthController;
+use App\Http\Controllers\Api\LogoutController;
+use App\Http\Middleware\CheckRole;
 
-// ── Public routes (no JWT) ──
 Route::post('register', [RegisterController::class, 'register']);
 Route::post('verify-otp', [VerificationController::class, 'verify']);
 Route::post('resend-otp', [VerificationController::class, 'resend']);
@@ -24,17 +24,16 @@ Route::post('verify-token', [VerificationController::class, 'verifyWithToken']);
 Route::get('check-otp-status', [VerificationController::class, 'checkStatus']);
 Route::delete('revoke-otp', [VerificationController::class, 'revokeOtp']);
 
-// ✅ Social Auth routes – public
 Route::get('auth/{provider}', [SocialAuthController::class, 'redirect']);
 Route::get('auth/{provider}/callback', [SocialAuthController::class, 'callback']);
 
-// ── Protected routes (require JWT) ──
 Route::middleware('jwt.auth')->group(function () {
-    Route::post('logout', [AuthController::class, 'logout']);
+    Route::post('logout', [LogoutController::class, 'logout']);
+    Route::post('logout-all', [LogoutController::class, 'logoutAllDevices']);
+
     Route::post('refresh', [AuthController::class, 'refresh']);
     Route::get('me', [AuthController::class, 'me']);
 
-    Route::post('revoke-all-sessions', [AuthController::class, 'revokeAllSessions']);
     Route::get('login-history', [AuthController::class, 'loginHistory']);
     Route::get('devices', [AuthController::class, 'devices']);
     Route::delete('devices/{device}', [AuthController::class, 'revokeDevice']);
