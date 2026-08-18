@@ -39,6 +39,7 @@ class User extends Authenticatable implements JWTSubject
         'created_by',
         'updated_by',
         'deleted_by',
+        'fitcoin_balance',          // ✅ added
     ];
 
     /**
@@ -62,6 +63,7 @@ class User extends Authenticatable implements JWTSubject
         'password_changed_at' => 'datetime',
         'last_login_at' => 'datetime',
         'last_activity_at' => 'datetime',
+        'fitcoin_balance' => 'integer',   // ✅ added
     ];
 
     /**

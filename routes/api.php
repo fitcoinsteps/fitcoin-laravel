@@ -9,6 +9,9 @@ use App\Http\Controllers\Api\Admin\UserController;
 use App\Http\Controllers\Api\Admin\PermissionController;
 use App\Http\Controllers\Api\SocialAuthController;
 use App\Http\Controllers\Api\LogoutController;
+use App\Http\Controllers\Api\StepController;
+use App\Http\Controllers\Api\TrackingSessionController;
+use App\Http\Controllers\Api\FitcoinController;   // ✅ added
 use App\Http\Middleware\CheckRole;
 
 Route::post('register', [RegisterController::class, 'register']);
@@ -39,11 +42,35 @@ Route::middleware('jwt.auth')->group(function () {
     Route::delete('devices/{device}', [AuthController::class, 'revokeDevice']);
     Route::post('devices/{device}/trust', [AuthController::class, 'trustDevice']);
 
-    Route::middleware([CheckRole::class . ':super-admin,admin'])->prefix('admin')->group(function () {
-        Route::apiResource('roles', RoleController::class);
-        Route::post('roles/{role}/permissions', [RoleController::class, 'assignPermissions']);
-        Route::apiResource('users', UserController::class);
-        Route::post('users/{user}/assign-role', [UserController::class, 'assignRole']);
-        Route::apiResource('permissions', PermissionController::class)->only(['index', 'show']);
-    });
+    Route::get('steps/today', [StepController::class, 'today']);
+    Route::post('steps', [StepController::class, 'store']);
+    Route::get('steps/history', [StepController::class, 'history']);
+
+    Route::post('tracking-sessions', [TrackingSessionController::class, 'store']);
+    Route::get('tracking-sessions', [TrackingSessionController::class, 'index']);
+
+    // ✅ Fitcoin routes
+    Route::get('fitcoins/balance', [FitcoinController::class, 'balance']);
+    Route::post('fitcoins/convert', [FitcoinController::class, 'convert']);
+
+    Route::middleware([CheckRole::class . ':super-admin,admin'])
+        ->prefix('admin')
+        ->group(function () {
+            Route::apiResource('roles', RoleController::class);
+
+            Route::post(
+                'roles/{role}/permissions',
+                [RoleController::class, 'assignPermissions']
+            );
+
+            Route::apiResource('users', UserController::class);
+
+            Route::post(
+                'users/{user}/assign-role',
+                [UserController::class, 'assignRole']
+            );
+
+            Route::apiResource('permissions', PermissionController::class)
+                ->only(['index', 'show']);
+        });
 });
