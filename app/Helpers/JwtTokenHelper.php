@@ -7,11 +7,13 @@ use App\Models\User;
 use Illuminate\Support\Str;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\Exceptions\TokenExpiredException;
+use Tymon\JWTAuth\Exceptions\TokenInvalidException;
 
 class JwtTokenHelper
 {
     /**
-     * Generate JWT token for a user (simple version with refresh token storage).
+     * Generate JWT token for a user (with refresh token storage).
      * 
      * @param User $user
      * @return array
@@ -62,19 +64,46 @@ class JwtTokenHelper
     }
 
     /**
-     * Refresh the token.
+     * Refresh the token - handles expired tokens too.
      * 
      * @return array
+     * @throws TokenExpiredException
+     * @throws TokenInvalidException
+     * @throws JWTException
      */
     public static function refreshTokens(): array
     {
-        $token = JWTAuth::refresh();
-        
-        return [
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => JWTAuth::factory()->getTTL() * 60,
-        ];
+        try {
+            // Try to refresh the token (works even if expired)
+            $token = JWTAuth::refresh();
+            
+            return [
+                'access_token' => $token,
+                'token_type' => 'bearer',
+                'expires_in' => JWTAuth::factory()->getTTL() * 60,
+            ];
+        } catch (TokenExpiredException $e) {
+            // Token is expired - try to refresh anyway
+            // JWTAuth::refresh() should handle this
+            throw $e;
+        } catch (TokenInvalidException $e) {
+            throw $e;
+        } catch (JWTException $e) {
+            throw $e;
+        }
+    }
+
+    /**
+     * Refresh with revoke: revoke old refresh token, issue new pair.
+     * 
+     * @param string $oldJti
+     * @param User $user
+     * @return array
+     */
+    public static function refreshWithRevoke(string $oldJti, User $user): array
+    {
+        self::revokeRefreshToken($oldJti);
+        return self::generateTokens($user);
     }
 
     /**
@@ -101,19 +130,6 @@ class JwtTokenHelper
     {
         $token = JwtToken::where('token_id', $jti)->first();
         return $token && !$token->revoked && $token->expires_at->isFuture();
-    }
-
-    /**
-     * Refresh flow: revoke old refresh token, issue new pair.
-     * 
-     * @param string $oldJti
-     * @param User $user
-     * @return array
-     */
-    public static function refreshWithRevoke(string $oldJti, User $user): array
-    {
-        self::revokeRefreshToken($oldJti);
-        return self::generateTokens($user);
     }
 
     /**
@@ -175,5 +191,35 @@ class JwtTokenHelper
         return JwtToken::where('expires_at', '<', now())
             ->orWhere('revoked', true)
             ->delete();
+    }
+
+    /**
+     * Get the current authenticated user.
+     * 
+     * @return User|null
+     */
+    public static function getAuthenticatedUser(): ?User
+    {
+        try {
+            return JWTAuth::parseToken()->authenticate();
+        } catch (JWTException $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Check if token is valid.
+     * 
+     * @param string $token
+     * @return bool
+     */
+    public static function isTokenValid(string $token): bool
+    {
+        try {
+            JWTAuth::setToken($token)->authenticate();
+            return true;
+        } catch (JWTException $e) {
+            return false;
+        }
     }
 }

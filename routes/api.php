@@ -11,9 +11,12 @@ use App\Http\Controllers\Api\SocialAuthController;
 use App\Http\Controllers\Api\LogoutController;
 use App\Http\Controllers\Api\StepController;
 use App\Http\Controllers\Api\TrackingSessionController;
-use App\Http\Controllers\Api\FitcoinController;   // ✅ added
+use App\Http\Controllers\Api\FitcoinController;
+use App\Http\Controllers\Api\GiftCardController;
+use App\Http\Controllers\Api\CryptoWithdrawalController;
 use App\Http\Middleware\CheckRole;
 
+// ==================== PUBLIC ROUTES ====================
 Route::post('register', [RegisterController::class, 'register']);
 Route::post('verify-otp', [VerificationController::class, 'verify']);
 Route::post('resend-otp', [VerificationController::class, 'resend']);
@@ -30,47 +33,78 @@ Route::delete('revoke-otp', [VerificationController::class, 'revokeOtp']);
 Route::get('auth/{provider}', [SocialAuthController::class, 'redirect']);
 Route::get('auth/{provider}/callback', [SocialAuthController::class, 'callback']);
 
+// ✅ Refresh token - PUBLIC (outside auth middleware)
+Route::post('refresh', [AuthController::class, 'refresh']);
+
+// ==================== PROTECTED ROUTES (JWT Required) ====================
 Route::middleware('jwt.auth')->group(function () {
+    // ==================== AUTH ====================
     Route::post('logout', [LogoutController::class, 'logout']);
     Route::post('logout-all', [LogoutController::class, 'logoutAllDevices']);
-
-    Route::post('refresh', [AuthController::class, 'refresh']);
     Route::get('me', [AuthController::class, 'me']);
 
+    // ==================== LOGIN HISTORY & DEVICES ====================
     Route::get('login-history', [AuthController::class, 'loginHistory']);
     Route::get('devices', [AuthController::class, 'devices']);
     Route::delete('devices/{device}', [AuthController::class, 'revokeDevice']);
     Route::post('devices/{device}/trust', [AuthController::class, 'trustDevice']);
 
+    // ==================== STEPS ====================
     Route::get('steps/today', [StepController::class, 'today']);
     Route::post('steps', [StepController::class, 'store']);
     Route::get('steps/history', [StepController::class, 'history']);
 
+    // ==================== TRACKING SESSIONS ====================
     Route::post('tracking-sessions', [TrackingSessionController::class, 'store']);
     Route::get('tracking-sessions', [TrackingSessionController::class, 'index']);
 
-    // ✅ Fitcoin routes
+    // ==================== FITCOIN ====================
     Route::get('fitcoins/balance', [FitcoinController::class, 'balance']);
     Route::post('fitcoins/convert', [FitcoinController::class, 'convert']);
 
+    // ==================== GIFT CARDS ====================
+    Route::get('gift-cards/providers', [GiftCardController::class, 'providers']);
+    Route::post('gift-cards/redeem', [GiftCardController::class, 'redeem']);
+    Route::get('gift-cards/history', [GiftCardController::class, 'history']);
+
+    // ==================== CRYPTO WITHDRAWALS ====================
+    Route::get('crypto/options', [CryptoWithdrawalController::class, 'options']);
+    Route::post('crypto/withdraw', [CryptoWithdrawalController::class, 'request']);
+    Route::get('crypto/history', [CryptoWithdrawalController::class, 'history']);
+
+    // ==================== ADMIN ROUTES ====================
     Route::middleware([CheckRole::class . ':super-admin,admin'])
         ->prefix('admin')
         ->group(function () {
+            // ==================== ROLES & PERMISSIONS ====================
             Route::apiResource('roles', RoleController::class);
-
-            Route::post(
-                'roles/{role}/permissions',
-                [RoleController::class, 'assignPermissions']
-            );
-
+            Route::post('roles/{role}/permissions', [RoleController::class, 'assignPermissions']);
             Route::apiResource('users', UserController::class);
+            Route::post('users/{user}/assign-role', [UserController::class, 'assignRole']);
+            Route::apiResource('permissions', PermissionController::class)->only(['index', 'show']);
 
-            Route::post(
-                'users/{user}/assign-role',
-                [UserController::class, 'assignRole']
-            );
+            // ==================== ADMIN GIFT CARDS ====================
+            Route::get('gift-cards', [\App\Http\Controllers\Admin\GiftCardController::class, 'index']);
+            Route::post('gift-cards', [\App\Http\Controllers\Admin\GiftCardController::class, 'store']);
+            Route::get('gift-cards/{giftCard}/edit', [\App\Http\Controllers\Admin\GiftCardController::class, 'edit']);
+            Route::put('gift-cards/{giftCard}', [\App\Http\Controllers\Admin\GiftCardController::class, 'update']);
+            Route::delete('gift-cards/{giftCard}', [\App\Http\Controllers\Admin\GiftCardController::class, 'destroy']);
+            Route::get('gift-cards/redemptions', [\App\Http\Controllers\Admin\GiftCardController::class, 'redemptions']);
+            Route::get('gift-cards/redemptions/{redemption}', [\App\Http\Controllers\Admin\GiftCardController::class, 'showRedemption']);
+            Route::put('gift-cards/redemptions/{redemption}/complete', [\App\Http\Controllers\Admin\GiftCardController::class, 'completeRedemption']);
+            Route::put('gift-cards/redemptions/{redemption}/cancel', [\App\Http\Controllers\Admin\GiftCardController::class, 'cancelRedemption']);
+            Route::get('gift-cards/statistics', [\App\Http\Controllers\Admin\GiftCardController::class, 'statistics']);
+            Route::get('gift-cards/bulk-upload', [\App\Http\Controllers\Admin\GiftCardController::class, 'bulkUpload']);
+            Route::post('gift-cards/bulk-upload', [\App\Http\Controllers\Admin\GiftCardController::class, 'storeBulk']);
+            Route::get('gift-cards/export', [\App\Http\Controllers\Admin\GiftCardController::class, 'export']);
 
-            Route::apiResource('permissions', PermissionController::class)
-                ->only(['index', 'show']);
+            // ==================== ADMIN CRYPTO WITHDRAWALS ====================
+            Route::get('crypto/withdrawals', [\App\Http\Controllers\Admin\WithdrawalController::class, 'index']);
+            Route::get('crypto/withdrawals/{withdrawal}', [\App\Http\Controllers\Admin\WithdrawalController::class, 'show']);
+            Route::put('crypto/withdrawals/{withdrawal}/process', [\App\Http\Controllers\Admin\WithdrawalController::class, 'process']);
+            Route::put('crypto/withdrawals/{withdrawal}/complete', [\App\Http\Controllers\Admin\WithdrawalController::class, 'complete']);
+            Route::put('crypto/withdrawals/{withdrawal}/fail', [\App\Http\Controllers\Admin\WithdrawalController::class, 'fail']);
+            Route::get('crypto/withdrawals/statistics', [\App\Http\Controllers\Admin\WithdrawalController::class, 'statistics']);
+            Route::get('crypto/withdrawals/export', [\App\Http\Controllers\Admin\WithdrawalController::class, 'export']);
         });
 });
