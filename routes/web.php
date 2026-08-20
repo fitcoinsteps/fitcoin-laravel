@@ -11,6 +11,9 @@ use App\Http\Controllers\Web\SocialAuthController;
 use App\Http\Controllers\Web\VerificationController;
 use App\Http\Controllers\Web\MeController;
 use App\Http\Controllers\Web\DeviceController;
+use App\Http\Controllers\Web\FitcoinController;
+use App\Http\Controllers\Web\StepController;
+use App\Http\Controllers\Web\ProfileController;   // ✅ Profile controller
 
 Route::get('/', function () {
     return view('website.home');
@@ -57,12 +60,23 @@ Route::post('/resend-otp', [VerificationController::class, 'resend'])->name('res
 Route::get('/auth/{provider}', [SocialAuthController::class, 'redirect']);
 Route::get('/auth/{provider}/callback', [SocialAuthController::class, 'callback']);
 
-Route::middleware(['jwt.auth.cookie'])->group(function () {
+Route::middleware(['jwt.auth.cookie', 'device.active'])->group(function () {
     Route::get('/me', [MeController::class, 'me'])->name('me');
 
     Route::get('/devices', [DeviceController::class, 'index'])->name('devices.index');
     Route::delete('/devices/{device}', [DeviceController::class, 'revoke'])->name('devices.revoke');
     Route::post('/devices/{device}/trust', [DeviceController::class, 'trust'])->name('devices.trust');
+
+    Route::get('/steps/today', [StepController::class, 'today'])->name('steps.today');
+    Route::post('/steps', [StepController::class, 'sync'])->name('steps.sync');
+    Route::post('/steps/goal', [StepController::class, 'updateGoal'])->name('steps.goal');
+
+    Route::get('/fitcoin/balance', [FitcoinController::class, 'balance'])->name('fitcoin.balance');
+    Route::post('/fitcoin/convert', [FitcoinController::class, 'convert'])->name('fitcoin.convert');
+
+    Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
+    Route::post('/profile/update', [ProfileController::class, 'update'])->name('profile.update');
+    Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar'])->name('profile.avatar');
 
     Route::get('/user/dashboard', function () {
         return view('user.dashboard');

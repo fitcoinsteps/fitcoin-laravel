@@ -50,6 +50,7 @@ class AuthService
 
         $user = User::where('email', $email)->first();
 
+        // Handle verification if needed
         $verificationNeeded = $this->handleVerification($user, $credentials);
         if ($verificationNeeded) {
             throw new \Exception($verificationNeeded->getContent(), 403);
@@ -66,7 +67,7 @@ class AuthService
         /** @var User $user */
         $user = $guard->user();
 
-        // Role restriction (new)
+        // Role restriction (if any)
         if ($allowedRoles !== null && !in_array($user->role, $allowedRoles, true)) {
             $guard->logout();
             throw new \Exception('This account type is not allowed to use this login method.', 403);
@@ -77,15 +78,18 @@ class AuthService
             throw new \Exception('Account disabled or locked', 403);
         }
 
-        if (!$this->isDeviceAvailable($ip, $userAgent, $user->id)) {
-            throw new \Exception('Device already in use. Please logout first before logging in with another account.', 403);
-        }
+        // NEW: Revoke any active device with the same global fingerprint (IP + user agent)
+        $globalFingerprint = hash('sha256', $ip . $userAgent);
+        Device::where('global_fingerprint', $globalFingerprint)
+              ->whereNull('revoked_at')
+              ->update(['revoked_at' => now()]);
 
-        // Revoke all previous active devices (single active session)
+        // Also revoke all previous active devices for this user (single active session per user)
         Device::where('user_id', $user->id)
               ->whereNull('revoked_at')
               ->update(['revoked_at' => now()]);
 
+        // Create/update device
         $device = $this->checkDevice($user, $ip, $userAgent, $deviceName, $credentials['remember'] ?? false);
 
         $user->update([

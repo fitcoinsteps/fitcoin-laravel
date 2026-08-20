@@ -40,9 +40,30 @@ class LogoutController extends Controller
 
             $guard->logout();
 
-            // Clear both access and refresh cookies
-            $accessCookie = cookie('jwt_token', '', -1);
-            $refreshCookie = cookie('jwt_refresh_token', '', -1);
+            // Clear both access and refresh cookies with SameSite=Strict
+            $accessCookie = cookie(
+                'jwt_token',
+                '',
+                -1,
+                '/',
+                null,
+                true,      // secure
+                true,      // httpOnly
+                false,     // raw
+                'Strict'   // SameSite
+            );
+
+            $refreshCookie = cookie(
+                'jwt_refresh_token',
+                '',
+                -1,
+                '/',
+                null,
+                true,      // secure
+                true,      // httpOnly
+                false,     // raw
+                'Strict'   // SameSite
+            );
 
             return response()->json(['message' => 'Logged out successfully'])
                 ->withCookie($accessCookie)
@@ -78,9 +99,30 @@ class LogoutController extends Controller
 
             $guard->logout();
 
-            // Clear both cookies
-            $accessCookie = cookie('jwt_token', '', -1);
-            $refreshCookie = cookie('jwt_refresh_token', '', -1);
+            // Clear both cookies with SameSite=Strict
+            $accessCookie = cookie(
+                'jwt_token',
+                '',
+                -1,
+                '/',
+                null,
+                true,      // secure
+                true,      // httpOnly
+                false,     // raw
+                'Strict'   // SameSite
+            );
+
+            $refreshCookie = cookie(
+                'jwt_refresh_token',
+                '',
+                -1,
+                '/',
+                null,
+                true,      // secure
+                true,      // httpOnly
+                false,     // raw
+                'Strict'   // SameSite
+            );
 
             return response()->json(['message' => 'All sessions revoked successfully'])
                 ->withCookie($accessCookie)

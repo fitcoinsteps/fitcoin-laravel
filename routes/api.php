@@ -11,6 +11,9 @@ use App\Http\Controllers\Api\SocialAuthController;
 use App\Http\Controllers\Api\VerificationController;
 use App\Http\Controllers\Api\MeController;
 use App\Http\Controllers\Api\DeviceController;
+use App\Http\Controllers\Api\StepController;
+use App\Http\Controllers\Api\FitcoinController;
+use App\Http\Controllers\Api\ProfileController;
 
 Route::post('login', [LoginController::class, 'login']);
 Route::post('register', [RegisterController::class, 'register']);
@@ -26,13 +29,26 @@ Route::delete('revoke-otp', [VerificationController::class, 'revokeOtp']);
 
 Route::post('auth/{provider}/mobile', [SocialAuthController::class, 'handleApiCallback']);
 
-Route::middleware('jwt.auth')->group(function () {
+// ✅ Refresh route must be public
+Route::post('refresh', [RefreshTokenController::class, 'refresh']);
+
+Route::middleware(['jwt.auth', 'device.active'])->group(function () {
     Route::post('logout', [LogoutController::class, 'logout']);
     Route::post('logout-all', [LogoutController::class, 'logoutAllDevices']);
-    Route::post('refresh', [RefreshTokenController::class, 'refresh']);
     Route::get('me', [MeController::class, 'me']);
 
     Route::get('devices', [DeviceController::class, 'index']);
     Route::delete('devices/{device}', [DeviceController::class, 'revoke']);
     Route::post('devices/{device}/trust', [DeviceController::class, 'trust']);
+
+    Route::get('steps/today', [StepController::class, 'today']);
+    Route::post('steps', [StepController::class, 'sync']);
+    Route::post('steps/goal', [StepController::class, 'updateGoal']);
+
+    Route::get('fitcoin/balance', [FitcoinController::class, 'balance']);
+    Route::post('fitcoin/convert', [FitcoinController::class, 'convert']);
+
+    Route::get('profile', [ProfileController::class, 'show']);
+    Route::post('profile/update', [ProfileController::class, 'update']);
+    Route::post('profile/avatar', [ProfileController::class, 'uploadAvatar']);
 });

@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\VerificationCode;
 use App\Helpers\JwtTokenHelper;
 use App\Mail\OtpMail;
+use App\Traits\DeviceTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,8 @@ use Illuminate\Support\Str;
 
 class VerificationController extends Controller
 {
+    use DeviceTrait;
+
     /**
      * Verify OTP for registration (email + code).
      */
@@ -69,23 +72,40 @@ class VerificationController extends Controller
                 return response()->json(['message' => 'Registration failed. Please try again.'], 500);
             }
 
+            // ✅ Create device record for the new user
+            $this->checkDevice($user, $request->ip(), $request->userAgent(), 'Unknown Device', false);
+
             $tokens = JwtTokenHelper::generateTokens($user);
 
-            $cookie = cookie(
+            $accessCookie = cookie(
                 'jwt_token',
                 $tokens['access_token'],
                 $tokens['expires_in'] / 60,
                 '/',
                 null,
                 true,
-                true
+                true,
+                false,
+                'Strict'
+            );
+
+            $refreshCookie = cookie(
+                'jwt_refresh_token',
+                $tokens['refresh_token'],
+                30 * 24 * 60,
+                '/',
+                null,
+                true,
+                true,
+                false,
+                'Strict'
             );
 
             return response()->json([
                 'message' => 'Registration completed successfully!',
                 'user'    => $user,
                 'role'    => $user->role,
-            ])->withCookie($cookie);
+            ])->withCookie($accessCookie)->withCookie($refreshCookie);
         }
 
         // Password reset verification

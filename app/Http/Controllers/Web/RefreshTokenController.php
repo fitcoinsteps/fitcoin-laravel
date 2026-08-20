@@ -25,8 +25,10 @@ class RefreshTokenController extends Controller
                 $token['expires_in'] / 60,
                 '/',
                 null,
-                true,
-                true
+                true,      // secure
+                true,      // httpOnly
+                false,     // raw
+                'Strict'   // SameSite
             );
 
             return response()->json([

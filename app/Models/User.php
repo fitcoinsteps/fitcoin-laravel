@@ -38,6 +38,7 @@ class User extends Authenticatable implements JWTSubject
         'created_by',
         'updated_by',
         'deleted_by',
+        'fitcoin_balance',   // added
     ];
 
     protected $hidden = [
@@ -54,16 +55,23 @@ class User extends Authenticatable implements JWTSubject
         'last_activity_at' => 'datetime',
     ];
 
+    /**
+     * Get the identifier that will be stored in the JWT subject claim.
+     */
     public function getJWTIdentifier()
     {
         return $this->getKey();
     }
 
+    /**
+     * Return a key-value array containing any custom claims to add to the JWT.
+     */
     public function getJWTCustomClaims()
     {
         return [];
     }
 
+    // Relationships
     public function socialAccounts(): HasMany
     {
         return $this->hasMany(SocialAccount::class);
@@ -89,6 +97,23 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(VerificationCode::class);
     }
 
+    // Fitcoin related relationships
+    public function steps(): HasMany
+    {
+        return $this->hasMany(Step::class);
+    }
+
+    public function fitcoinTransactions(): HasMany
+    {
+        return $this->hasMany(FitcoinTransaction::class);
+    }
+
+    public function trackingSessions(): HasMany
+    {
+        return $this->hasMany(TrackingSession::class);
+    }
+
+    // Role helpers
     public function hasRole(string $role): bool
     {
         return $this->role === $role;

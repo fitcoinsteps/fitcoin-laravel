@@ -34,8 +34,10 @@ class LoginController extends Controller
                 $result['tokens']['expires_in'] / 60,
                 '/',
                 null,
-                true,
-                true
+                true,      // secure
+                true,      // httpOnly
+                false,     // raw
+                'Strict'   // SameSite
             );
 
             // Refresh token cookie (long-lived, 30 days)
@@ -45,8 +47,10 @@ class LoginController extends Controller
                 30 * 24 * 60,
                 '/',
                 null,
-                true,
-                true
+                true,      // secure
+                true,      // httpOnly
+                false,     // raw
+                'Strict'   // SameSite
             );
 
             return response()->json([

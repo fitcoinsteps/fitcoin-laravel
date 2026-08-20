@@ -25,17 +25,35 @@ class SocialAuthController extends Controller
         try {
             $result = $this->socialAuthService->handleCallback($provider, $request);
 
-            $cookie = cookie(
+            // Access token cookie
+            $accessCookie = cookie(
                 'jwt_token',
                 $result['tokens']['access_token'],
                 $result['tokens']['expires_in'] / 60,
                 '/',
                 null,
-                true,
-                true
+                true,      // secure
+                true,      // httpOnly
+                false,     // raw
+                'Strict'   // SameSite
             );
 
-            return redirect($result['redirect'])->withCookie($cookie);
+            // Refresh token cookie
+            $refreshCookie = cookie(
+                'jwt_refresh_token',
+                $result['tokens']['refresh_token'],
+                30 * 24 * 60,
+                '/',
+                null,
+                true,      // secure
+                true,      // httpOnly
+                false,     // raw
+                'Strict'   // SameSite
+            );
+
+            return redirect($result['redirect'])
+                ->withCookie($accessCookie)
+                ->withCookie($refreshCookie);
         } catch (\Exception $e) {
             return redirect('/login?error=social_auth_failed');
         }

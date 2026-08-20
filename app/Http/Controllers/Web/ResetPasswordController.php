@@ -48,14 +48,30 @@ class ResetPasswordController extends Controller
             'attempts'   => 0,
         ]);
 
-        $cookie = cookie(
+        // Access token cookie
+        $accessCookie = cookie(
             'jwt_token',
             $tokens['access_token'],
             $tokens['expires_in'] / 60,
             '/',
             null,
-            true,
-            true
+            true,      // secure
+            true,      // httpOnly
+            false,     // raw
+            'Strict'   // SameSite
+        );
+
+        // Refresh token cookie
+        $refreshCookie = cookie(
+            'jwt_refresh_token',
+            $tokens['refresh_token'],
+            30 * 24 * 60,
+            '/',
+            null,
+            true,      // secure
+            true,      // httpOnly
+            false,     // raw
+            'Strict'   // SameSite
         );
 
         return response()->json([
@@ -64,6 +80,6 @@ class ResetPasswordController extends Controller
             'token_type'   => 'bearer',
             'expires_in'   => $tokens['expires_in'],
             'user'         => $user,
-        ])->withCookie($cookie);
+        ])->withCookie($accessCookie)->withCookie($refreshCookie);
     }
 }

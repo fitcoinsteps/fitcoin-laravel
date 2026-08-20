@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'jwt.auth.cookie' => \App\Http\Middleware\JwtMiddleware::class,
             'role'            => \App\Http\Middleware\CheckRole::class,
+            'device.active'   => \App\Http\Middleware\EnsureDeviceIsActive::class,   // added
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
