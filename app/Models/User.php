@@ -11,11 +11,9 @@ class User extends Authenticatable implements JWTSubject
 {
     use Notifiable;
 
-    /**
-     * The attributes that are mass assignable.
-     *
-     * @var array<int, string>
-     */
+    const ROLE_SUPER_ADMIN = 'super-admin';
+    const ROLE_USER = 'user';
+
     protected $fillable = [
         'uuid',
         'employee_code',
@@ -27,6 +25,7 @@ class User extends Authenticatable implements JWTSubject
         'email',
         'password',
         'phone',
+        'role',
         'email_verified_at',
         'phone_verified_at',
         'avatar',
@@ -41,104 +40,62 @@ class User extends Authenticatable implements JWTSubject
         'deleted_by',
     ];
 
-    /**
-     * The attributes that should be hidden for serialization.
-     *
-     * @var array<int, string>
-     */
     protected $hidden = [
         'password',
         'remember_token',
     ];
 
-    /**
-     * The attributes that should be cast.
-     *
-     * @var array<string, string>
-     */
     protected $casts = [
         'email_verified_at' => 'datetime',
         'phone_verified_at' => 'datetime',
         'password_changed_at' => 'datetime',
+        'locked_until' => 'datetime',
         'last_login_at' => 'datetime',
         'last_activity_at' => 'datetime',
     ];
 
-    /**
-     * Get the identifier that will be stored in the JWT subject claim.
-     */
     public function getJWTIdentifier()
     {
         return $this->getKey();
     }
 
-    /**
-     * Return a key-value array containing any custom claims to add to the JWT.
-     */
     public function getJWTCustomClaims()
     {
         return [];
     }
 
-    /**
-     * Get the social accounts associated with the user.
-     */
     public function socialAccounts(): HasMany
     {
         return $this->hasMany(SocialAccount::class);
     }
 
-    /**
-     * The roles that belong to the user.
-     */
-    public function roles()
-    {
-        return $this->belongsToMany(Role::class, 'user_roles')
-                    ->withPivot('assigned_at', 'expires_at')
-                    ->wherePivot('is_deleted', 0);
-    }
-
-    /**
-     * The permissions that belong to the user.
-     */
-    public function permissions()
-    {
-        return $this->belongsToMany(Permission::class, 'user_permissions')
-                    ->withPivot('allowed')
-                    ->wherePivot('is_deleted', 0);
-    }
-
-    public function devices()
+    public function devices(): HasMany
     {
         return $this->hasMany(Device::class);
     }
 
-    public function loginHistories()
+    public function loginHistories(): HasMany
     {
         return $this->hasMany(LoginHistory::class);
     }
 
-    /**
-     * Get the JWT tokens owned by the user.
-     */
-    public function jwtTokens()
+    public function jwtTokens(): HasMany
     {
         return $this->hasMany(JwtToken::class);
     }
 
-    /**
-     * Check if the user has a specific role slug.
-     */
-    public function hasRole(string $roleSlug): bool
+    public function verificationCodes(): HasMany
     {
-        return $this->roles->contains('slug', $roleSlug);
+        return $this->hasMany(VerificationCode::class);
     }
 
-    /**
-     * Check if the user has any of the given role slugs.
-     */
-    public function hasAnyRole(array $roleSlugs): bool
+    public function hasRole(string $role): bool
     {
-        return $this->roles->pluck('slug')->intersect($roleSlugs)->isNotEmpty();
+        return $this->role === $role;
+    }
+
+    public function hasAnyRole(array $roles): bool
+    {
+        return in_array($this->role, $roles);
     }
 }

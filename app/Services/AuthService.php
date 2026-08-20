@@ -1,95 +1,91 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Services;
 
-use App\Http\Controllers\Controller;
-use App\Helpers\JwtTokenHelper;
+use App\Models\User;
 use App\Models\Registration;
 use App\Models\VerificationCode;
 use App\Models\LoginHistory;
 use App\Models\Device;
-use App\Models\User;
 use App\Mail\OtpMail;
 use App\Traits\DeviceTrait;
+use App\Helpers\JwtTokenHelper;
 use Illuminate\Http\Request;
-use Tymon\JWTAuth\JWTGuard;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Tymon\JWTAuth\JWTGuard;
 
-class AuthController extends Controller
+class AuthService
 {
     use DeviceTrait;
 
-    private function guard(): JWTGuard
+    /**
+     * Attempt to authenticate a user with the given credentials.
+     * Optionally restrict allowed roles via $allowedRoles.
+     *
+     * @param array $credentials
+     * @param Request $request
+     * @param array|null $allowedRoles
+     * @return array
+     */
+    public function attemptLogin(array $credentials, Request $request, ?array $allowedRoles = null): array
     {
-        return auth('api');
-    }
-
-    private function authUser(): ?User
-    {
-        /** @var User|null $user */
-        $user = $this->guard()->user();
-        return $user;
-    }
-
-    public function login(Request $request)
-    {
-        $credentials = $request->validate([
-            'email'       => 'required|email',
-            'password'    => 'required|string|min:6',
-            'remember'    => 'nullable|boolean',
-            'device_name' => 'nullable|string|max:255',
-        ]);
-
-        $email      = $credentials['email'];
-        $ip         = $request->ip();
-        $userAgent  = $request->userAgent();
+        $email = $credentials['email'];
+        $ip = $request->ip();
+        $userAgent = $request->userAgent();
         $deviceName = $credentials['device_name'] ?? 'Unknown Device';
 
         if ($this->isAccountLocked($email, $ip)) {
-            return response()->json([
-                'error' => 'Account temporarily locked due to too many failed attempts. Please try again later.'
-            ], 403);
+            throw new \Exception('Account temporarily locked due to too many failed attempts. Please try again later.', 403);
         }
 
         try {
             $this->checkRateLimit($email, $ip);
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 429);
+            throw new \Exception($e->getMessage(), 429);
         }
 
         $user = User::where('email', $email)->first();
 
         $verificationNeeded = $this->handleVerification($user, $credentials);
         if ($verificationNeeded) {
-            return $verificationNeeded;
+            throw new \Exception($verificationNeeded->getContent(), 403);
         }
 
-        if (!$token = $this->guard()->attempt($credentials)) {
+        /** @var JWTGuard $guard */
+        $guard = auth('api');
+
+        if (!$token = $guard->attempt($credentials)) {
             $this->logFailedAttempt($email, $ip, $userAgent);
-            return response()->json(['error' => 'Invalid credentials'], 401);
+            throw new \Exception('Invalid credentials', 401);
         }
 
         /** @var User $user */
-        $user = $this->authUser();
+        $user = $guard->user();
+
+        // Role restriction (new)
+        if ($allowedRoles !== null && !in_array($user->role, $allowedRoles, true)) {
+            $guard->logout();
+            throw new \Exception('This account type is not allowed to use this login method.', 403);
+        }
 
         if (!$user->is_active || $user->is_locked) {
-            $this->guard()->logout();
-            return response()->json(['error' => 'Account disabled or locked'], 403);
+            $guard->logout();
+            throw new \Exception('Account disabled or locked', 403);
         }
 
-        // ── Device availability check ──
         if (!$this->isDeviceAvailable($ip, $userAgent, $user->id)) {
-            return response()->json([
-                'error' => 'Device already in use. Please logout first before logging in with another account.'
-            ], 403);
+            throw new \Exception('Device already in use. Please logout first before logging in with another account.', 403);
         }
 
-        // ── Register/update device ──
+        // Revoke all previous active devices (single active session)
+        Device::where('user_id', $user->id)
+              ->whereNull('revoked_at')
+              ->update(['revoked_at' => now()]);
+
         $device = $this->checkDevice($user, $ip, $userAgent, $deviceName, $credentials['remember'] ?? false);
 
         $user->update([
@@ -107,20 +103,11 @@ class AuthController extends Controller
 
         $tokens = JwtTokenHelper::generateTokens($user);
 
-        // Load roles for the authenticated user
-        $user->load('roles');
-
-        return response()->json([
-            'access_token' => $tokens['access_token'],
-            'token_type'   => 'bearer',
-            'expires_in'   => $tokens['expires_in'],
-            'user'         => $user,
-            'device'       => $device ? [
-                'id'        => $device->id,
-                'name'      => $device->device_name,
-                'is_trusted'=> $device->is_trusted,
-            ] : null,
-        ]);
+        return [
+            'tokens' => $tokens,
+            'user'   => $user,
+            'device' => $device,
+        ];
     }
 
     private function checkRateLimit(string $email, string $ip): void
@@ -216,6 +203,7 @@ class AuthController extends Controller
                 'password'   => $user->password,
                 'first_name' => $user->first_name,
                 'last_name'  => $user->last_name,
+                'role'       => $user->role,
                 'expires_at' => now()->addMinutes(15),
             ]);
         }
@@ -306,177 +294,6 @@ class AuthController extends Controller
             ]);
         } catch (\Exception $e) {
             Log::error('Login notification failed: ' . $e->getMessage());
-        }
-    }
-
-    public function loginHistory(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $user  = $this->authUser();
-        $limit = $request->get('limit', 20);
-
-        $history = LoginHistory::where('user_id', $user->id)
-            ->orWhere('email', $user->email)
-            ->orderBy('created_at', 'desc')
-            ->limit($limit)
-            ->get();
-
-        return response()->json($history);
-    }
-
-    public function devices(): \Illuminate\Http\JsonResponse
-    {
-        $user = $this->authUser();
-        $devices = Device::where('user_id', $user->id)
-            ->orderBy('last_used_at', 'desc')
-            ->get();
-
-        return response()->json($devices);
-    }
-
-    public function revokeDevice(int $deviceId): \Illuminate\Http\JsonResponse
-    {
-        $user = $this->authUser();
-        $device = Device::where('user_id', $user->id)
-            ->where('id', $deviceId)
-            ->first();
-
-        if (!$device) {
-            return response()->json(['error' => 'Device not found'], 404);
-        }
-
-        $device->update(['revoked_at' => now()]);
-
-        return response()->json(['message' => 'Device revoked successfully']);
-    }
-
-    public function trustDevice(int $deviceId): \Illuminate\Http\JsonResponse
-    {
-        $user = $this->authUser();
-        $device = Device::where('user_id', $user->id)
-            ->where('id', $deviceId)
-            ->first();
-
-        if (!$device) {
-            return response()->json(['error' => 'Device not found'], 404);
-        }
-
-        $device->update(['is_trusted' => true]);
-
-        return response()->json(['message' => 'Device trusted successfully']);
-    }
-
-    public function forgotPassword(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $request->validate(['email' => 'required|email']);
-
-        $user = User::where('email', $request->email)->first();
-        if (!$user) {
-            return response()->json(['message' => 'If the email exists, a reset link will be sent.'], 200);
-        }
-
-        $token = Str::random(60);
-        $otp = random_int(100000, 999999);
-
-        VerificationCode::where('user_id', $user->id)
-            ->where('type', 'password_reset')
-            ->whereNull('used_at')
-            ->update(['is_revoked' => true]);
-
-        VerificationCode::create([
-            'uuid'       => (string) Str::uuid(),
-            'user_id'    => $user->id,
-            'type'       => 'password_reset',
-            'via'        => 'email',
-            'code'       => $otp,
-            'token'      => $token,
-            'expires_at' => now()->addMinutes(15),
-        ]);
-
-        try {
-            Mail::to($user->email)->send(new OtpMail($otp, $user->first_name, 'password_reset'));
-            Log::info("Password reset OTP sent to {$user->email}");
-        } catch (\Exception $e) {
-            Log::error('Password reset OTP email failed: ' . $e->getMessage());
-            return response()->json(['message' => 'Failed to send OTP. Please try again.'], 500);
-        }
-
-        return response()->json([
-            'message' => 'OTP sent to your email.',
-            'email'   => $user->email,
-            'type'    => 'password_reset',
-            'token'   => $token,
-        ], 200);
-    }
-
-    public function resetPassword(Request $request): \Illuminate\Http\JsonResponse
-    {
-        $request->validate([
-            'email'    => 'required|email',
-            'token'    => 'required|string',
-            'password' => 'required|string|min:8|confirmed',
-        ]);
-
-        $verification = VerificationCode::where('token', $request->token)
-            ->where('type', 'password_reset')
-            ->where('expires_at', '>', now())
-            ->where('is_revoked', false)
-            ->whereNull('used_at')
-            ->first();
-
-        if (!$verification) {
-            return response()->json(['error' => 'Invalid or expired token.'], 400);
-        }
-
-        $user = User::where('email', $request->email)->first();
-        if (!$user || $user->id != $verification->user_id) {
-            return response()->json(['error' => 'User not found.'], 404);
-        }
-
-        $user->update([
-            'password' => Hash::make($request->password),
-        ]);
-
-        $verification->update(['used_at' => now()]);
-
-        Device::where('user_id', $user->id)->update(['revoked_at' => now()]);
-
-        $token = JwtTokenHelper::generateTokens($user);
-
-        $this->logSuccessfulLogin($user, $request->ip(), $request->userAgent());
-
-        return response()->json([
-            'message'      => 'Password reset successfully.',
-            'access_token' => $token['access_token'],
-            'token_type'   => 'bearer',
-            'expires_in'   => $token['expires_in'],
-            'user'         => $user,
-        ]);
-    }
-
-    public function me(): \Illuminate\Http\JsonResponse
-    {
-        $user = $this->authUser();
-
-        if (!$user) {
-            return response()->json(['error' => 'Unauthorized'], 401);
-        }
-
-        $user->load(['roles', 'permissions', 'devices']);
-
-        return response()->json($user);
-    }
-
-    public function refresh(): \Illuminate\Http\JsonResponse
-    {
-        try {
-            $token = JwtTokenHelper::refreshTokens();
-            return response()->json([
-                'access_token' => $token['access_token'],
-                'token_type'   => 'bearer',
-                'expires_in'   => $token['expires_in'],
-            ]);
-        } catch (\Exception $e) {
-            return response()->json(['error' => 'Could not refresh token'], 401);
         }
     }
 }

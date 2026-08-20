@@ -16,6 +16,7 @@ class VerificationCode extends Model
         'token',
         'expires_at',
         'used_at',
+        'verified_at',
         'attempts',
         'is_revoked',
     ];
@@ -23,6 +24,8 @@ class VerificationCode extends Model
     protected $casts = [
         'expires_at' => 'datetime',
         'used_at' => 'datetime',
+        'verified_at' => 'datetime',
+        'attempts' => 'integer',
         'is_revoked' => 'boolean',
     ];
 

@@ -1,18 +1,14 @@
 @extends('layouts.user')
 
 @section('title', 'User Dashboard - Fitcoin')
-@section('page-title', 'My Dashboard')
 
 @section('content')
-<div class="min-h-screen flex items-center justify-center px-4 bg-black">
+<div class="min-h-screen flex items-center justify-center px-4">
     <div class="text-center">
         <h1 class="text-5xl font-bold mb-4">
-            Welcome to user <span class="bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">Fitcoin</span>
+            Welcome to <span class="bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">Fitcoin</span>
         </h1>
-        
-        <p class="text-gray-400 text-lg">
-            Your fitness journey starts here.
-        </p>
+        <p class="text-gray-400 text-lg">Your fitness journey starts here.</p>
     </div>
 </div>
 @endsection

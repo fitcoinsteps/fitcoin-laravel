@@ -17,11 +17,8 @@ trait DeviceTrait
                               ->whereNull('revoked_at')
                               ->first();
 
-        if ($activeDevice && $activeDevice->user_id !== $userId) {
-            return false;
-        }
-
-        return true;
+        // Allow if no active device exists OR the active device belongs to this user
+        return !$activeDevice || $activeDevice->user_id === $userId;
     }
 
     /**
@@ -57,21 +54,6 @@ trait DeviceTrait
                 'last_used_at'       => now(),
                 'is_trusted'         => $remember,
             ]);
-
-            // Limit active sessions per user (max 5)
-            $activeCount = Device::where('user_id', $user->id)
-                                 ->whereNull('revoked_at')
-                                 ->count();
-
-            if ($activeCount > 5) {
-                $oldest = Device::where('user_id', $user->id)
-                                ->whereNull('revoked_at')
-                                ->orderBy('last_used_at')
-                                ->first();
-                if ($oldest) {
-                    $oldest->update(['revoked_at' => now()]);
-                }
-            }
         }
 
         return $device;

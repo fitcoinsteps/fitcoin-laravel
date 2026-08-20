@@ -12,6 +12,7 @@ class CreateRegistrationsTable extends Migration
             $table->id();
             $table->uuid('uuid')->unique();
             $table->string('email')->unique();
+            $table->string('role')->default('user'); // Removed after('email')
             $table->string('phone')->nullable();
             $table->string('username')->unique();
             $table->string('password');

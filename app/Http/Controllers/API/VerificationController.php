@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Registration;
 use App\Models\User;
 use App\Models\VerificationCode;
-use App\Services\RoleService;
 use App\Mail\OtpMail;
 use App\Helpers\JwtTokenHelper;
 use Illuminate\Http\Request;
@@ -75,14 +74,10 @@ class VerificationController extends Controller
             return response()->json(['message' => 'Registration record not found.'], 404);
         }
 
-        $isFirstUser = false;
         try {
             DB::beginTransaction();
 
-            // Lock the users table to prevent concurrent first-user race
-            $userCount = User::lockForUpdate()->count();
-            $isFirstUser = $userCount === 0;
-
+            // Create user with role stored in registration
             $user = User::create([
                 'uuid'              => (string) Str::uuid(),
                 'email'             => $registration->email,
@@ -91,22 +86,14 @@ class VerificationController extends Controller
                 'password'          => $registration->password,
                 'first_name'        => $registration->first_name,
                 'last_name'         => $registration->last_name,
+                'role'              => $registration->role,
                 'email_verified_at' => now(),
                 'is_active'         => 1,
             ]);
 
-            RoleService::createDefaultRolesIfNeeded();
-            $roleSlug = $isFirstUser ? 'super-admin' : 'users';
-            $role = \App\Models\Role::where('slug', $roleSlug)->first();
-            if ($role) {
-                $user->roles()->attach($role->id, [
-                    'assigned_at' => now(),
-                    'is_deleted'  => 0,
-                ]);
-                Log::info("User {$user->email} registered as {$roleSlug}");
-            }
-
+            // Delete the registration record
             $registration->delete();
+
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
@@ -115,7 +102,6 @@ class VerificationController extends Controller
         }
 
         $tokens = JwtTokenHelper::generateSimpleTokens($user);
-        $user->load('roles');
 
         return response()->json([
             'message'    => 'Registration completed successfully!',
@@ -123,7 +109,7 @@ class VerificationController extends Controller
             'token'      => $tokens['access_token'],
             'token_type' => 'bearer',
             'expires_in' => $tokens['expires_in'],
-            'role'       => $isFirstUser ? 'super-admin' : 'users',
+            'role'       => $user->role,
         ], 200);
     }
 
@@ -258,9 +244,6 @@ class VerificationController extends Controller
 
     /**
      * Verify OTP with token (used for password reset)
-     * 
-     * This is the endpoint that your verify-otp page calls for password_reset.
-     * IMPORTANT: For password_reset, we DO NOT set used_at here – only verified_at.
      */
     public function verifyWithToken(Request $request)
     {
@@ -273,7 +256,7 @@ class VerificationController extends Controller
             ->where('code', $data['code'])
             ->where('expires_at', '>', now())
             ->where('is_revoked', false)
-            ->whereNull('used_at')          // still not used
+            ->whereNull('used_at')
             ->first();
 
         if (!$verificationCode) {
@@ -281,24 +264,18 @@ class VerificationController extends Controller
             return response()->json(['message' => 'Invalid or expired OTP code.'], 400);
         }
 
-        // ---------- THE FIX ----------
         if ($verificationCode->type === 'password_reset') {
-            // Mark as verified but DO NOT mark used_at (keep it null)
             $verificationCode->update(['verified_at' => now()]);
 
             return response()->json([
                 'message' => 'OTP verified successfully. Proceed to reset password.',
                 'verified' => true,
                 'type'     => 'password_reset',
-                'token'    => $verificationCode->token,   // return token for convenience
+                'token'    => $verificationCode->token,
                 'email'    => optional($verificationCode->user)->email,
             ], 200);
         }
 
-        // For other types (registration, login), you can handle accordingly.
-        // For registration, you might want to complete the registration flow here,
-        // but typically that's done via the verify method (email+code).
-        // We'll just mark as used and return success.
         $verificationCode->update(['used_at' => now()]);
 
         return response()->json([

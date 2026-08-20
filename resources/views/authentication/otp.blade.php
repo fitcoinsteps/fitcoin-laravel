@@ -2,91 +2,24 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OTP Verification</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f3f4f6;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background: #ffffff;
-            border-radius: 12px;
-            padding: 40px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        .header h1 {
-            color: #1a202c;
-            font-size: 24px;
-            font-weight: 700;
-        }
-        .header .brand {
-            color: #ec4899;
-            font-weight: 800;
-        }
-        .code-box {
-            background: linear-gradient(135deg, #fdf2f8 0%, #f3e8ff 100%);
-            border: 2px dashed #ec4899;
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            margin: 30px 0;
-        }
-        .code {
-            font-size: 36px;
-            font-weight: 700;
-            color: #1a202c;
-            letter-spacing: 8px;
-            background: #ffffff;
-            padding: 15px 30px;
-            border-radius: 8px;
-            display: inline-block;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-        }
-        .info {
-            color: #4a5568;
-            line-height: 1.6;
-            text-align: center;
-        }
-        .info strong {
-            color: #1a202c;
-        }
-        .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #e2e8f0;
-            color: #718096;
-            font-size: 14px;
-        }
-    </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>🔐 <span class="brand">Fitcoin</span></h1>
-            <p style="color: #4a5568; font-size: 16px;">
-                @if($type === 'password_reset')
-                    Password Reset Verification Code
-                @else
-                    Your OTP Verification Code
-                @endif
-            </p>
-        </div>
+<body style="font-family: Arial, sans-serif; background-color: #f3f4f6; margin: 0; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; padding: 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <h1 style="color: #1a202c; text-align: center;">🔐 Fitcoin</h1>
+        <p style="color: #4a5568; font-size: 16px; text-align: center;">
+            @if($type === 'password_reset')
+                Password Reset Verification Code
+            @else
+                Your OTP Verification Code
+            @endif
+        </p>
 
         @if($firstName)
-            <p class="info" style="font-size: 16px;">Hello <strong>{{ $firstName }}</strong>,</p>
+            <p style="color: #4a5568;">Hello <strong>{{ $firstName }}</strong>,</p>
         @endif
 
-        <p class="info" style="margin-top: 10px;">
+        <p style="color: #4a5568;">
             @if($type === 'password_reset')
                 Use the verification code below to reset your password.
             @else
@@ -95,19 +28,14 @@
             This code will expire in <strong>15 minutes</strong>.
         </p>
 
-        <div class="code-box">
-            <div class="code">{{ $code }}</div>
+        <div style="background: linear-gradient(135deg, #fdf2f8 0%, #f3e8ff 100%); border: 2px dashed #ec4899; border-radius: 12px; padding: 20px; text-align: center; margin: 30px 0;">
+            <span style="font-size: 36px; font-weight: 700; letter-spacing: 8px;">{{ $code }}</span>
         </div>
 
-        <p class="info" style="font-size: 14px; color: #718096;">
-            If you didn't request this code, please ignore this email.
-        </p>
+        <p style="color: #718096; font-size: 14px;">If you didn't request this code, please ignore this email.</p>
 
-        <div class="footer">
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #718096; font-size: 14px;">
             <p>&copy; {{ date('Y') }} Fitcoin. All rights reserved.</p>
-            <p style="font-size: 12px; color: #a0aec0;">
-                This is an automated message, please do not reply to this email.
-            </p>
         </div>
     </div>
 </body>

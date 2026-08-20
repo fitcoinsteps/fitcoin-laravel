@@ -71,6 +71,8 @@
 
             const urlParams = new URLSearchParams(window.location.search);
             const email = urlParams.get('email');
+            const type = urlParams.get('type') || 'registration';
+            const token = urlParams.get('token') || '';
 
             if (!email) {
                 window.location.href = '/register';
@@ -114,9 +116,8 @@
             }
 
             function redirectBasedOnRole(user) {
-                const roles = user.roles.map(r => r.slug);
                 let redirectUrl = '/user/dashboard';
-                if (roles.includes('super-admin') || roles.includes('admin')) {
+                if (user.role === 'super-admin') {
                     redirectUrl = '/admin/dashboard';
                 }
                 window.location.href = redirectUrl;
@@ -127,7 +128,7 @@
                 resendBtn.textContent = 'Sending...';
 
                 try {
-                    const response = await fetch('/api/resend-otp', {
+                    const response = await fetch('/resend-otp', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -163,7 +164,7 @@
                 verifyBtn.textContent = 'Verifying...';
 
                 try {
-                    const response = await fetch('/api/verify-otp', {
+                    const response = await fetch('/verify-otp', {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -184,23 +185,20 @@
                         return;
                     }
 
-                    if (data.token) {
-                        localStorage.setItem('access_token', data.token);
+                    // If password reset type, redirect to reset page
+                    if (data.type === 'password_reset') {
+                        window.location.href = '/resetPassword?email=' + encodeURIComponent(decodedEmail) + '&token=' + encodeURIComponent(data.token);
+                        return;
                     }
-                    if (data.refresh_token) {
-                        localStorage.setItem('refresh_token', data.refresh_token);
-                    }
+
+                    // Registration success: cookie set, redirect based on role
                     showMessage('Registration completed successfully! Redirecting...', 'success');
                     otpInput.disabled = true;
                     verifyBtn.disabled = true;
                     verifyBtn.textContent = 'Verified';
 
                     setTimeout(() => {
-                        if (data.user && data.user.roles) {
-                            redirectBasedOnRole(data.user);
-                        } else {
-                            window.location.href = '/dashboard';
-                        }
+                        redirectBasedOnRole(data.user);
                     }, 1500);
 
                 } catch (error) {

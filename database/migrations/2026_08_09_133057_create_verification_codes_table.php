@@ -19,6 +19,7 @@ class CreateVerificationCodesTable extends Migration
             $table->string('token')->nullable();
             $table->timestamp('expires_at');
             $table->timestamp('used_at')->nullable();
+            $table->timestamp('verified_at')->nullable(); // Removed after('used_at')
             $table->integer('attempts')->default(0);
             $table->boolean('is_revoked')->default(0);
             $table->timestamps();

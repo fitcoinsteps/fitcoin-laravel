@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Models\Device;
@@ -40,7 +40,13 @@ class LogoutController extends Controller
 
             $guard->logout();
 
-            return response()->json(['message' => 'Logged out successfully']);
+            // Clear both access and refresh cookies
+            $accessCookie = cookie('jwt_token', '', -1);
+            $refreshCookie = cookie('jwt_refresh_token', '', -1);
+
+            return response()->json(['message' => 'Logged out successfully'])
+                ->withCookie($accessCookie)
+                ->withCookie($refreshCookie);
         } catch (JWTException $e) {
             return response()->json(['message' => 'Already logged out'], 200);
         } catch (\Exception $e) {
@@ -72,7 +78,13 @@ class LogoutController extends Controller
 
             $guard->logout();
 
-            return response()->json(['message' => 'All sessions revoked successfully']);
+            // Clear both cookies
+            $accessCookie = cookie('jwt_token', '', -1);
+            $refreshCookie = cookie('jwt_refresh_token', '', -1);
+
+            return response()->json(['message' => 'All sessions revoked successfully'])
+                ->withCookie($accessCookie)
+                ->withCookie($refreshCookie);
         } catch (JWTException $e) {
             return response()->json(['message' => 'Already logged out'], 200);
         } catch (\Exception $e) {

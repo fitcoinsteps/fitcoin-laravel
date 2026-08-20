@@ -17,10 +17,15 @@ class Registration extends Model
         'middle_name',
         'employee_code',
         'avatar',
+        'role',
         'registration_data',
         'expires_at',
         'is_verified',
         'verified_at',
+    ];
+
+    protected $attributes = [
+        'role' => 'user',
     ];
 
     protected $casts = [

@@ -17,9 +17,9 @@ class Device extends Model
     ];
 
     protected $casts = [
-        'is_trusted' => 'boolean',
         'last_used_at' => 'datetime',
         'revoked_at' => 'datetime',
+        'is_trusted' => 'boolean',
     ];
 
     public function user()

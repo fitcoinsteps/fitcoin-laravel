@@ -18,6 +18,7 @@ class CreateUsersTable extends Migration
             $table->string('last_name');
             $table->string('display_name')->nullable();
             $table->string('email')->unique();
+            $table->string('role')->default('user'); // Removed after('email')
             $table->timestamp('email_verified_at')->nullable();
             $table->string('phone')->nullable();
             $table->timestamp('phone_verified_at')->nullable();
@@ -27,6 +28,7 @@ class CreateUsersTable extends Migration
             $table->string('status')->nullable();
             $table->boolean('is_active')->default(1);
             $table->boolean('is_locked')->default(0);
+            $table->timestamp('locked_until')->nullable(); // Removed after('is_locked')
             $table->boolean('is_deleted')->default(0);
             $table->timestamp('last_login_at')->nullable();
             $table->timestamp('last_activity_at')->nullable();
@@ -37,6 +39,12 @@ class CreateUsersTable extends Migration
             $table->timestamps();
             $table->softDeletes();
 
+            // Self-referencing foreign keys
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('updated_by')->references('id')->on('users')->onDelete('set null');
+            $table->foreign('deleted_by')->references('id')->on('users')->onDelete('set null');
+
+            // Indexes
             $table->index('uuid');
             $table->index('email');
             $table->index('username');
