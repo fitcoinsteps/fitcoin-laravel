@@ -8,6 +8,14 @@ class VerifyCsrfToken extends Middleware
 {
     protected $except = [
         'api/*',
-        'login',   // <-- add this
+        'login',
+        'web-register',
+        'verify-otp',
+        'resend-otp',
+        'forgot-password',
+        'reset-password',
+        'refresh',
+        'logout',
+        'logout-all',
     ];
 }

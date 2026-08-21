@@ -25,11 +25,6 @@ class AuthService
     /**
      * Attempt to authenticate a user with the given credentials.
      * Optionally restrict allowed roles via $allowedRoles.
-     *
-     * @param array $credentials
-     * @param Request $request
-     * @param array|null $allowedRoles
-     * @return array
      */
     public function attemptLogin(array $credentials, Request $request, ?array $allowedRoles = null): array
     {
@@ -48,9 +43,10 @@ class AuthService
             throw new \Exception($e->getMessage(), 429);
         }
 
+        // Only look in the users table
         $user = User::where('email', $email)->first();
 
-        // Handle verification if needed
+        // Handle email verification for pending registration or unverified user
         $verificationNeeded = $this->handleVerification($user, $credentials);
         if ($verificationNeeded) {
             throw new \Exception($verificationNeeded->getContent(), 403);
@@ -78,18 +74,16 @@ class AuthService
             throw new \Exception('Account disabled or locked', 403);
         }
 
-        // NEW: Revoke any active device with the same global fingerprint (IP + user agent)
+        // Device handling (single session)
         $globalFingerprint = hash('sha256', $ip . $userAgent);
         Device::where('global_fingerprint', $globalFingerprint)
               ->whereNull('revoked_at')
               ->update(['revoked_at' => now()]);
 
-        // Also revoke all previous active devices for this user (single active session per user)
         Device::where('user_id', $user->id)
               ->whereNull('revoked_at')
               ->update(['revoked_at' => now()]);
 
-        // Create/update device
         $device = $this->checkDevice($user, $ip, $userAgent, $deviceName, $credentials['remember'] ?? false);
 
         $user->update([

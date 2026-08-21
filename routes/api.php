@@ -14,6 +14,9 @@ use App\Http\Controllers\Api\DeviceController;
 use App\Http\Controllers\Api\StepController;
 use App\Http\Controllers\Api\FitcoinController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\FriendshipController;
+use App\Http\Controllers\Api\ChallengeController;
+use App\Http\Controllers\Api\AccountController;
 
 Route::post('login', [LoginController::class, 'login']);
 Route::post('register', [RegisterController::class, 'register']);
@@ -29,7 +32,6 @@ Route::delete('revoke-otp', [VerificationController::class, 'revokeOtp']);
 
 Route::post('auth/{provider}/mobile', [SocialAuthController::class, 'handleApiCallback']);
 
-// ✅ Refresh route must be public
 Route::post('refresh', [RefreshTokenController::class, 'refresh']);
 
 Route::middleware(['jwt.auth', 'device.active'])->group(function () {
@@ -51,4 +53,26 @@ Route::middleware(['jwt.auth', 'device.active'])->group(function () {
     Route::get('profile', [ProfileController::class, 'show']);
     Route::post('profile/update', [ProfileController::class, 'update']);
     Route::post('profile/avatar', [ProfileController::class, 'uploadAvatar']);
+
+    // Friendship routes
+    Route::get('friends', [FriendshipController::class, 'index']);
+    Route::post('friends/request', [FriendshipController::class, 'sendRequest']);
+    Route::post('friends/accept', [FriendshipController::class, 'accept']);
+    Route::post('friends/reject', [FriendshipController::class, 'reject']);
+    Route::get('friends/requests', [FriendshipController::class, 'pending']);
+    Route::delete('friends/{friendId}', [FriendshipController::class, 'remove']);
+    Route::get('users/search', [FriendshipController::class, 'searchUsers']);
+
+    // Challenge routes (user CRUD + activation)
+    Route::get('challenges', [ChallengeController::class, 'index']);
+    Route::post('challenges', [ChallengeController::class, 'store']);
+    Route::put('challenges/{id}', [ChallengeController::class, 'update']);
+    Route::delete('challenges/{id}', [ChallengeController::class, 'destroy']);
+    Route::post('challenges/{id}/activate', [ChallengeController::class, 'activate']);
+    Route::get('challenges/active', [ChallengeController::class, 'active']);
+    Route::get('challenges/history', [ChallengeController::class, 'history']);
+    Route::get('challenges/{id}/progress', [ChallengeController::class, 'checkProgress']);
+
+    Route::post('account/deactivate', [AccountController::class, 'deactivate']);
+
 });

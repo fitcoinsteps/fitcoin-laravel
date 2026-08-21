@@ -5,11 +5,12 @@ namespace App\Models;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;  // ✅ add this import
 use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
-    use Notifiable;
+    use Notifiable, SoftDeletes;   // ✅ add SoftDeletes trait
 
     const ROLE_SUPER_ADMIN = 'super-admin';
     const ROLE_USER = 'user';
@@ -38,7 +39,7 @@ class User extends Authenticatable implements JWTSubject
         'created_by',
         'updated_by',
         'deleted_by',
-        'fitcoin_balance',   // added
+        'fitcoin_balance',
     ];
 
     protected $hidden = [
@@ -55,17 +56,11 @@ class User extends Authenticatable implements JWTSubject
         'last_activity_at' => 'datetime',
     ];
 
-    /**
-     * Get the identifier that will be stored in the JWT subject claim.
-     */
     public function getJWTIdentifier()
     {
         return $this->getKey();
     }
 
-    /**
-     * Return a key-value array containing any custom claims to add to the JWT.
-     */
     public function getJWTCustomClaims()
     {
         return [];
@@ -111,6 +106,12 @@ class User extends Authenticatable implements JWTSubject
     public function trackingSessions(): HasMany
     {
         return $this->hasMany(TrackingSession::class);
+    }
+
+    // Challenge related
+    public function challenges(): HasMany
+    {
+        return $this->hasMany(UserChallenge::class);
     }
 
     // Role helpers

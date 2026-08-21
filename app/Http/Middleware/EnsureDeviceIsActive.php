@@ -22,6 +22,9 @@ class EnsureDeviceIsActive
             return response()->json(['error' => 'Unauthorized'], 401);
         }
 
+        // Update last activity timestamp for online status
+        $user->update(['last_activity_at' => now()]);
+
         // Calculate fingerprint same as DeviceTrait
         $fingerprint = hash('sha256', $request->ip() . $request->userAgent() . $user->id);
 

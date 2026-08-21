@@ -19,9 +19,6 @@ class VerificationController extends Controller
 {
     use DeviceTrait;
 
-    /**
-     * Verify OTP for registration (email + code).
-     */
     public function verify(Request $request)
     {
         $data = $request->validate([
@@ -39,7 +36,6 @@ class VerificationController extends Controller
             return response()->json(['message' => 'Invalid or expired OTP code.'], 400);
         }
 
-        // Registration flow
         if ($verificationCode->type === 'registration') {
             $registration = Registration::find($verificationCode->registration_id);
             if (!$registration || $registration->email !== $data['email']) {
@@ -72,7 +68,6 @@ class VerificationController extends Controller
                 return response()->json(['message' => 'Registration failed. Please try again.'], 500);
             }
 
-            // ✅ Create device record for the new user
             $this->checkDevice($user, $request->ip(), $request->userAgent(), 'Unknown Device', false);
 
             $tokens = JwtTokenHelper::generateTokens($user);
@@ -108,7 +103,6 @@ class VerificationController extends Controller
             ])->withCookie($accessCookie)->withCookie($refreshCookie);
         }
 
-        // Password reset verification
         if ($verificationCode->type === 'password_reset') {
             $user = User::find($verificationCode->user_id);
             if (!$user || $user->email !== $data['email']) {
@@ -128,9 +122,6 @@ class VerificationController extends Controller
         return response()->json(['message' => 'Unsupported verification type.'], 400);
     }
 
-    /**
-     * Resend OTP for registration.
-     */
     public function resend(Request $request)
     {
         $data = $request->validate(['email' => 'required|email']);

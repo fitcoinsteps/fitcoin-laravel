@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\VerificationCode;
 use App\Mail\OtpMail;
 use App\Helpers\JwtTokenHelper;
+use App\Traits\DeviceTrait;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
@@ -16,6 +17,8 @@ use Illuminate\Support\Str;
 
 class VerificationController extends Controller
 {
+    use DeviceTrait;
+
     /**
      * Verify OTP for registration (email + code)
      */
@@ -101,15 +104,20 @@ class VerificationController extends Controller
             return response()->json(['message' => 'Registration failed. Please try again.'], 500);
         }
 
-        $tokens = JwtTokenHelper::generateSimpleTokens($user);
+        // Create device record for the new user
+        $this->checkDevice($user, $request->ip(), $request->userAgent(), 'Unknown Device', false);
+
+        // Generate full token pair (access + refresh)
+        $tokens = JwtTokenHelper::generateTokens($user);
 
         return response()->json([
-            'message'    => 'Registration completed successfully!',
-            'user'       => $user,
-            'token'      => $tokens['access_token'],
-            'token_type' => 'bearer',
-            'expires_in' => $tokens['expires_in'],
-            'role'       => $user->role,
+            'message'        => 'Registration completed successfully!',
+            'user'           => $user,
+            'access_token'   => $tokens['access_token'],
+            'refresh_token'  => $tokens['refresh_token'],
+            'token_type'     => 'bearer',
+            'expires_in'     => $tokens['expires_in'],
+            'role'           => $user->role,
         ], 200);
     }
 

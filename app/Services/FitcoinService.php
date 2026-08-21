@@ -12,6 +12,10 @@ class FitcoinService
 {
     public function getBalance(User $user): array
     {
+        // ✅ Automatically convert eligible steps before returning balance
+        $this->autoConvert($user);
+        $user->refresh();   // reload updated fitcoin_balance
+
         $today = Carbon::today()->toDateString();
         $step = Step::where('user_id', $user->id)
                     ->where('date', $today)
